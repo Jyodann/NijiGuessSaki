@@ -1,8 +1,8 @@
 function loadAudio(element) {
     element.load()
 }
-function playAudio(element) {
-    stopAudio(element);
+function playAudio(element, startDuration) {
+    element.currentTime = startDuration;
     element.play();
 }
 function stopAudio(element) {

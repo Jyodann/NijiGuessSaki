@@ -29,9 +29,11 @@
     <br>
     @if (showSong)
     {
+        <img src="@song.track!.album!.images!.Where(x => x.height == 640).FirstOrDefault()!.url" width="400">
         <h1>@song.track.name</h1>
         <p1>By: @String.Join(", " , song!.track!.artists!.Select(x=>x.name))</p1>
-
+        <br>
+        <p1>From Album: @song!.track!.album.name</p1>
     }
 
     <audio @ref="@SolutionAudio">
@@ -87,7 +89,7 @@
             // Get Song:
             var playList_id = "5tP9Gkjx7PGQiFU8ZthNTJ";
             var songRequest = new HttpRequestMessage(HttpMethod.Get,
-            $"https://api.spotify.com/v1/playlists/{playList_id}/tracks?fields=items(track(name%2Cid%2Cpreview_url%2Cartists(name)))");
+            $"https://api.spotify.com/v1/playlists/{playList_id}/tracks?fields=items(track(name%2Cid%2Cpreview_url%2Cartists(name)%2Calbum(images%2Cname)))");
             songRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token?.access_token);
             var loveliveItem = await HttpClient.SendAsync(songRequest);
             Console.WriteLine(loveliveItem);
@@ -152,10 +154,10 @@
     public void RevealSong(ElementReference audioElement)
     {
         showSong = !showSong;
-
+        LoadAudio(SolutionAudio);
+        Console.WriteLine(song.track.album.images.Where(x => x.height == 640).FirstOrDefault().url);
         if (showSong)
         {
-            LoadAudio(SolutionAudio);
             PlayAudio(SolutionAudio);
         }
         else

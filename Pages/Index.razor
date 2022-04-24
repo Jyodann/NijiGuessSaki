@@ -1,0 +1,111 @@
+﻿@page "/"
+@using System.Net.Http.Headers
+@inject IJSRuntime Js
+@inject HttpClient Http
+
+<PageTitle>Index</PageTitle>
+
+<h1>Current Time: @CurrentTime.ToString()</h1>
+
+<button @onclick="PlayAudio">
+    Play Audio
+</button>
+
+<button @onclick="RevealSong">
+    Reveal Song
+</button>
+
+<button @onclick="IncreaseTime">Increase Time</button>
+
+<audio @ref="@Audio" @ontimeupdate="TimeUpdate" controls="controls">
+    <source src="@SongLink">
+</audio>
+<br>
+@if (showSong)
+{
+    <h1>@SongTitle</h1>
+    <p1>By: @SongArtist</p1>
+}
+
+
+@code {
+    public bool showSong { get; set; } = false;
+    public float CurrentTime { get; set; } = 0.5f;
+    public string SongLink { get; set; } = "";
+    public string SongTitle { get; set; } = "";
+
+    public string SongArtist { get; set; } = "";
+    bool IsPlaying { get; set; }
+
+    private ElementReference Audio { get; set; }
+    protected async override void OnAfterRender(bool firstRender)
+    {
+
+        if (firstRender)
+        {
+            Http.BaseAddress = new Uri("https://api.spotify.com/v1/playlists/");
+            Http.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer",
+            "BQCzqiwNRAMirwITWBoCdfAbh6zp-0N1xX9kXwFcwTmm_zk6dUBFeQxZKnmLth6LyR1zFb2ljTnVyVzPSDPryqS7qxEUpMbVcQTKXMWRL6LnMbiY0UZaNSmHrvCJmwUEw1bJkWzBMAKB5IpiIUNo1B_Sf7EvmdN1BQE4ekkQUBTZbQF1KZRQHYn7jlp0ZX0OUG1_GZLckp-rDoEJf6Cdiqs8QEoveZg6qXk5_Nls-8eURYF4oFc2eBR9hpH2cgKielTliczHhWk_pmS8_0juSt9F7w");
+            var loveliveItem =
+            await
+            Http.GetFromJsonAsync<LoveLiveHeardleSpotify.Data.LoveLiveSong>("7ulKXEl7j07T22foLPNzvU/tracks?fields=items(track(name%2Cid%2Cpreview_url%2Cartists(name)))");
+
+            Random rnd = new Random();
+            var randomSongNum = rnd.Next(0, loveliveItem.items.Count());
+            var randomSong = loveliveItem.items[randomSongNum];
+            Console.WriteLine(randomSong.track.name);
+            Console.WriteLine(randomSong.track.preview_url);
+            SongLink = randomSong.track.preview_url;
+            SongTitle = randomSong.track.name;
+            SongArtist = randomSong.track.artists.First().name;
+            StateHasChanged();
+            LoadAudio();
+        }
+
+        base.OnAfterRender(firstRender);
+    }
+
+    protected async override Task OnInitializedAsync()
+    {
+
+        await base.OnInitializedAsync();
+    }
+
+    private async Task PlayAudio()
+    {
+        await Js.InvokeVoidAsync("playAudio", Audio);
+        IsPlaying = true;
+    }
+
+    private async Task LoadAudio()
+    {
+        await Js.InvokeVoidAsync("loadAudio", Audio);
+    }
+
+    private async Task StopAudio()
+    {
+        await Js.InvokeVoidAsync("stopAudio", Audio);
+        IsPlaying = true;
+    }
+    public void IncreaseTime()
+    {
+        CurrentTime += 0.5f;
+    }
+
+    public void RevealSong()
+    {
+        showSong = !showSong;
+    }
+    private async void TimeUpdate(EventArgs e)
+    {
+        var result = await Js.InvokeAsync<string>("returnDuration", Audio);
+        Console.WriteLine(result);
+        var songDuration = float.Parse(result);
+        if (songDuration > CurrentTime)
+        {
+            StopAudio();
+        }
+    }
+
+}

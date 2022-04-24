@@ -9,7 +9,8 @@
 <PageTitle>Main Page</PageTitle>
 @if (song != null)
 {
-    <input type="number" min="0" max="100" step="5" @bind-value=@Volume>
+    <h1>Current Time: @CurrentTime seconds</h1>
+    <input type="range" min="0" max="100" step="5" @bind-value=@Volume>
     <button @onclick="@(() => PlayAudio(Audio))">
         Play Audio
     </button>
@@ -20,6 +21,8 @@
 
     <button @onclick="IncreaseTime">Increase Time</button>
 
+    <button @onclick="RefreshSong">Refresh Song</button>
+
     <audio @ref="@Audio" @ontimeupdate="TimeUpdate">
         <source src="@song.track!.preview_url">
     </audio>
@@ -27,12 +30,12 @@
     @if (showSong)
     {
         <h1>@song.track.name</h1>
-        <p1>@String.Join(", " , song!.track!.artists!.Select(x=>x.name))</p1>
+        <p1>By: @String.Join(", " , song!.track!.artists!.Select(x=>x.name))</p1>
 
     }
 
     <audio @ref="@SolutionAudio">
-        <source src="@song.track.preview_url">
+        <source src="@song.track!.preview_url">
     </audio>
 }
 
@@ -52,6 +55,8 @@
         }
     }
     public Song? song = null;
+
+    public SpotifyPlaylist? playListItems = null;
     public bool showSong { get; set; } = false;
     public float CurrentTime { get; set; } = 0.5f;
 
@@ -80,19 +85,17 @@
 
 
             // Get Song:
-            var playList_id = "7ulKXEl7j07T22foLPNzvU";
+            var playList_id = "5tP9Gkjx7PGQiFU8ZthNTJ";
             var songRequest = new HttpRequestMessage(HttpMethod.Get,
             $"https://api.spotify.com/v1/playlists/{playList_id}/tracks?fields=items(track(name%2Cid%2Cpreview_url%2Cartists(name)))");
             songRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token?.access_token);
             var loveliveItem = await HttpClient.SendAsync(songRequest);
-            var playList_Items = await loveliveItem.Content.ReadFromJsonAsync<SpotifyPlaylist>();
+            Console.WriteLine(loveliveItem);
+            playListItems = await loveliveItem.Content.ReadFromJsonAsync<SpotifyPlaylist>();
 
             Random rnd = new Random();
-            var randomSongNum = rnd.Next(0, playList_Items!.items!.Length);
-            var randomSong = playList_Items.items[randomSongNum]!;
-
-            Console.WriteLine(randomSong!.track!.preview_url);
-
+            var randomSongNum = rnd.Next(0, playListItems!.items!.Length);
+            var randomSong = playListItems.items[randomSongNum]!;
 
             song = randomSong;
             StateHasChanged();
@@ -100,22 +103,6 @@
             LoadAudio(SolutionAudio);
             SetAudioVolume(Audio, volume);
             SetAudioVolume(SolutionAudio, volume);
-            /*
-            var loveliveItem =
-            await
-            Http.GetFromJsonAsync<LoveLiveHeardleSpotify.Data.LoveLiveSong>("7ulKXEl7j07T22foLPNzvU/tracks?fields=items(track(name%2Cid%2Cpreview_url%2Cartists(name)))");
-
-            Random rnd = new Random();
-            var randomSongNum = rnd.Next(0, loveliveItem.items.Count());
-            var randomSong = loveliveItem.items[randomSongNum];
-            Console.WriteLine(randomSong.track.name);
-            Console.WriteLine(randomSong.track.preview_url);
-            SongLink = randomSong.track.preview_url;
-            SongTitle = randomSong.track.name;
-            SongArtist = randomSong.track.artists.First().name;
-            StateHasChanged();
-            LoadAudio();
-            */
         }
 
         base.OnAfterRender(firstRender);
@@ -147,6 +134,20 @@
     {
         CurrentTime += 0.5f;
     }
+    public void RefreshSong()
+    {
+        Random rnd = new Random();
+        var randomSongNum = rnd.Next(0, playListItems!.items!.Length);
+        var randomSong = playListItems.items[randomSongNum]!;
+
+        song = randomSong;
+
+        showSong = false;
+        CurrentTime = 0.5f;
+        LoadAudio(SolutionAudio);
+        LoadAudio(Audio);
+        StateHasChanged();
+    }
 
     public void RevealSong(ElementReference audioElement)
     {
@@ -154,12 +155,12 @@
 
         if (showSong)
         {
-            Console.WriteLine("Playing Song");
-
             LoadAudio(SolutionAudio);
             PlayAudio(SolutionAudio);
-
-            StateHasChanged();
+        }
+        else
+        {
+            StopAudio(SolutionAudio);
         }
 
     }

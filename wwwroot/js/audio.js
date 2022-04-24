@@ -10,6 +10,9 @@ function stopAudio(element) {
     element.currentTime = 0;
 }
 
+function setVolume(element, volume) {
+    element.volume = volume;
+}
 function returnDuration(element) {
     return element.currentTime.toString()
 }

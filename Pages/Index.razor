@@ -27,7 +27,6 @@
     <button @onclick="RefreshSong">Refresh Song</button>
     <br>
     <audio @ref="@Audio" @ontimeupdate="TimeUpdate">
-        <source src="@song.track!.preview_url">
     </audio>
     <br>
     @if (showSong)
@@ -99,7 +98,7 @@
             SongPlaysFrom = rnd.Next(0, 25);
             song = randomSong;
             StateHasChanged();
-            LoadAudio(Audio);
+            LoadAudio(Audio, randomSong!.track!.preview_url!);
             SetAudioVolume(Audio, volume);
 
         }
@@ -114,12 +113,11 @@
     }
     private void PlayAudio(ElementReference audioElement, float startDuration)
     {
-        LoadAudio(Audio);
         Js.InvokeVoidAsync("playAudio", audioElement, startDuration).GetAwaiter();
     }
 
-    private void LoadAudio(ElementReference audioElement) =>
-    Js.InvokeVoidAsync("loadAudio", audioElement).GetAwaiter();
+    private void LoadAudio(ElementReference audioElement, string sourceLink) =>
+    Js.InvokeVoidAsync("loadAudio", audioElement, sourceLink).GetAwaiter();
 
 
     private void StopAudio(ElementReference audioElement) =>
@@ -141,6 +139,7 @@
         CurrentTime = 0.5f;
         SongPlaysFrom = rnd.Next(0, 25);
         StopAudio(Audio);
+        LoadAudio(Audio, randomSong!.track!.preview_url!);
     }
 
     public void RevealSong(ElementReference audioElement)

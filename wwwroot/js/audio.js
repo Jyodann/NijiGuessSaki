@@ -1,4 +1,6 @@
-function loadAudio(element) {
+function loadAudio(element, audioSource) {
+    console.log(audioSource);
+    element.src = audioSource;
     element.load()
 }
 function playAudio(element, startDuration) {
@@ -13,6 +15,8 @@ function stopAudio(element) {
 function setVolume(element, volume) {
     element.volume = volume;
 }
+
+
 function returnDuration(element) {
     return element.currentTime.toString()
 }

@@ -1,0 +1,167 @@
+@page "/guess"
+@using System.Net.Http.Headers
+@inject IJSRuntime Js
+@inject HttpClient HttpClient
+@using Data
+@using Microsoft.Extensions.Configuration
+@inject IConfiguration Configuration
+
+<PageTitle>NijiguesSaki</PageTitle>
+@if (song != null)
+{
+    <h1>Niji-Guess-Saki</h1>
+    <h3>Current Play Period: @CurrentTime seconds</h3>
+    <h3>Song Started From: @SongPlaysFrom </h3>
+    <input type="range" min="0" max="100" @bind-value=@Volume>
+    <br>
+    <button @onclick="@(() => PlayAudio(Audio, SongPlaysFrom))">
+        Play Audio
+    </button>
+    <br>
+    <button @onclick="@(() => RevealSong(Audio))">
+        Reveal Song
+    </button>
+    <br>
+    <button @onclick="IncreaseTime">Increase Time</button>
+    <br>
+    <button @onclick="RefreshSong">Refresh Song</button>
+    <br>
+    <audio @ref="@Audio" @ontimeupdate="TimeUpdate">
+    </audio>
+    <br>
+    @if (showSong)
+    {
+        <img src="@song.track!.album!.images!.Where(x => x.height == 640).FirstOrDefault()!.url" width="400">
+        <h1>@song.track.name</h1>
+        <p1>Sung By: @String.Join(", " , song!.track!.artists!.Select(x=>x.name))</p1>
+        <br>
+        <p1>Album: @song!.track!.album.name</p1>
+    }
+}
+
+@code {
+    private int volume = 15;
+    public int Volume
+    {
+        get
+        {
+            return volume;
+        }
+        set
+        {
+            volume = value;
+            SetAudioVolume(Audio, value);
+
+        }
+    }
+    public Song? song = null;
+
+    public SpotifyPlaylist? playListItems = null;
+    public bool showSong { get; set; } = false;
+    public float CurrentTime { get; set; } = 0.5f;
+
+    public int SongPlaysFrom { get; set; } = 0;
+    bool IsPlaying { get; set; }
+
+    private ElementReference Audio { get; set; }
+
+    protected async override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            //Authentication for Playlist:
+            var client_id = Configuration.GetSection("NGS:ClientId").Value;
+            var client_secret = Configuration.GetSection("NGS:ClientSecret").Value;
+
+            var content = new FormUrlEncodedContent(new[] { new KeyValuePair<string, string>("grant_type", "client_credentials") });
+            var authenticationString =
+            Convert.ToBase64String(System.Text.ASCIIEncoding.ASCII.GetBytes($"{client_id}:{client_secret}"));
+
+            var bearerTokenRequest = new HttpRequestMessage(HttpMethod.Post, "https://accounts.spotify.com/api/token");
+            bearerTokenRequest.Headers.Authorization = new AuthenticationHeaderValue("Basic", authenticationString);
+            bearerTokenRequest.Content = content;
+
+            var result = await HttpClient.SendAsync(bearerTokenRequest);
+            var token = await result.Content.ReadFromJsonAsync<SpotifyToken>();
+
+
+            // Get Song:
+            var playList_id = "6yPiKpy7evrwvZodByKvM9";
+            var songRequest = new HttpRequestMessage(HttpMethod.Get,
+            $"https://api.spotify.com/v1/playlists/{playList_id}/tracks?fields=items(track(name%2Cid%2Cpreview_url%2Cartists(name)%2Calbum(images%2Cname)))");
+            songRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token?.access_token);
+            var loveliveItem = await HttpClient.SendAsync(songRequest);
+            playListItems = await loveliveItem.Content.ReadFromJsonAsync<SpotifyPlaylist>();
+
+            Random rnd = new Random();
+            var randomSongNum = rnd.Next(0, playListItems!.items!.Length);
+            var randomSong = playListItems.items[randomSongNum]!;
+            SongPlaysFrom = rnd.Next(0, 25);
+            song = randomSong;
+            StateHasChanged();
+            LoadAudio(Audio, randomSong!.track!.preview_url!);
+            SetAudioVolume(Audio, volume);
+            Console.WriteLine(playListItems.items.Length);
+        }
+
+        base.OnAfterRender(firstRender);
+    }
+
+    private void SetAudioVolume(ElementReference audioElement, int volume)
+    {
+        var newVol = volume / 100.0f;
+        Js.InvokeVoidAsync("setVolume", audioElement, newVol).GetAwaiter();
+    }
+    private void PlayAudio(ElementReference audioElement, float startDuration)
+    {
+        Js.InvokeVoidAsync("playAudio", audioElement, startDuration).GetAwaiter();
+    }
+
+    private void LoadAudio(ElementReference audioElement, string sourceLink) =>
+    Js.InvokeVoidAsync("loadAudio", audioElement, sourceLink).GetAwaiter();
+
+
+    private void StopAudio(ElementReference audioElement) =>
+    Js.InvokeVoidAsync("stopAudio", audioElement).GetAwaiter();
+
+    public void IncreaseTime()
+    {
+        CurrentTime += 0.5f;
+    }
+    public void RefreshSong()
+    {
+        Random rnd = new Random();
+        var randomSongNum = rnd.Next(0, playListItems!.items!.Length);
+        var randomSong = playListItems.items[randomSongNum]!;
+
+        song = randomSong;
+
+        showSong = false;
+        CurrentTime = 0.5f;
+        SongPlaysFrom = rnd.Next(0, 25);
+        StopAudio(Audio);
+        LoadAudio(Audio, randomSong!.track!.preview_url!);
+    }
+
+    public void RevealSong(ElementReference audioElement)
+    {
+        showSong = !showSong;
+
+        CurrentTime = 30.0f;
+        if (showSong)
+            PlayAudio(audioElement, 0.0f);
+        else
+            StopAudio(audioElement);
+
+    }
+    private async void TimeUpdate(EventArgs e)
+    {
+        if (showSong) return;
+        var result = await Js.InvokeAsync<string>("returnDuration", Audio);
+        var songDuration = float.Parse(result);
+        if ((songDuration - SongPlaysFrom) > CurrentTime)
+        {
+            StopAudio(Audio);
+        }
+    }
+}

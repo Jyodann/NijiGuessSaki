@@ -1,10 +1,11 @@
 @page "/guess"
 @using System.Net.Http.Headers
 @inject IJSRuntime Js
-@inject HttpClient HttpClient
 @using Data
 @using Microsoft.Extensions.Configuration
 @inject IConfiguration Configuration
+
+@inject IHttpClientFactory ClientFactory
 
 <PageTitle>NijiguesSaki</PageTitle>
 @if (song != null)
@@ -80,17 +81,17 @@
             var bearerTokenRequest = new HttpRequestMessage(HttpMethod.Post, "https://accounts.spotify.com/api/token");
             bearerTokenRequest.Headers.Authorization = new AuthenticationHeaderValue("Basic", authenticationString);
             bearerTokenRequest.Content = content;
-
-            var result = await HttpClient.SendAsync(bearerTokenRequest);
+            var client = ClientFactory.CreateClient();
+            var result = await client.SendAsync(bearerTokenRequest);
             var token = await result.Content.ReadFromJsonAsync<SpotifyToken>();
 
 
             // Get Song:
-            var playList_id = "6yPiKpy7evrwvZodByKvM9";
+            var playList_id = "7ulKXEl7j07T22foLPNzvU";
             var songRequest = new HttpRequestMessage(HttpMethod.Get,
             $"https://api.spotify.com/v1/playlists/{playList_id}/tracks?fields=items(track(name%2Cid%2Cpreview_url%2Cartists(name)%2Calbum(images%2Cname)))");
             songRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token?.access_token);
-            var loveliveItem = await HttpClient.SendAsync(songRequest);
+            var loveliveItem = await client.SendAsync(songRequest);
             playListItems = await loveliveItem.Content.ReadFromJsonAsync<SpotifyPlaylist>();
 
             Random rnd = new Random();

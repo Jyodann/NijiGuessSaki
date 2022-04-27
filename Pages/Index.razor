@@ -1,8 +1,9 @@
 ﻿@page "/"
 @inject IJSRuntime Js
-@inject HttpClient HttpClient
 @using Microsoft.Extensions.Configuration
+@using System.Net.Http.Headers
 @inject IConfiguration Configuration
+@inject IHttpClientFactory ClientFactory
 
 <PageTitle>NijiguesSaki</PageTitle>
 
@@ -24,29 +25,88 @@
     public string PlaylistStatus { get; set; } = "Check Playlist";
 
     public string ErrorMessage { get; set; } = string.Empty;
-    public void TestValue()
+    public async void TestValue()
     {
         ErrorMessage = string.Empty;
         PlaylistStatus = "Checking Playlist";
+
+        // Check Empty Song List:
         if (SongLink.Equals(string.Empty))
         {
             ErrorMessage = "No link was pasted";
             return;
         }
-
+        // Check if Starts with Spotify Link:
+        if (!SongLink.StartsWith("https://open.spotify.com/playlist/") && SongLink.Length > 22)
+        {
+            ErrorMessage = "Invalid Spotify Link detected";
+        }
         try
         {
             var tempSongLink = SongLink.Replace("https://open.spotify.com/playlist/", string.Empty);
             tempSongLink = tempSongLink.Substring(0, 22);
+            var token = await GetSpotifyToken();
+
+            if (token is null)
+            {
+                ErrorMessage = "Unable to communicate with Spotify Servers.";
+            }
+            else
+            {
+
+            }
+
         }
-        catch (ArgumentOutOfRangeException e)
+        catch (ArgumentOutOfRangeException)
         {
             ErrorMessage = "Invalid Spotify Link detected";
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
-            PlaylistStatus = "Check Playlist";
+            ErrorMessage = $"Error: {e}";
         }
+        finally
+        {
+
+            PlaylistStatus = "Check Playlist";
+
+        }
+
+        PlaylistStatus = "Check Playlist";
+        StateHasChanged();
+    }
+
+    public async Task<SpotifyToken?> GetSpotifyToken()
+    {
+        var client = ClientFactory.CreateClient();
+        var client_id = Configuration.GetSection("NGS:ClientId").Value;
+        var client_secret = Configuration.GetSection("NGS:ClientSecret").Value;
+
+        var content = new FormUrlEncodedContent(new[] { new KeyValuePair<string, string>("grant_type", "client_credentials") });
+        var authenticationString =
+        Convert.ToBase64String(System.Text.ASCIIEncoding.ASCII.GetBytes($"{client_id}:{client_secret}"));
+
+        var bearerTokenRequest = new HttpRequestMessage(HttpMethod.Post, "https://accounts.spotify.com/api/token");
+        bearerTokenRequest.Headers.Authorization = new AuthenticationHeaderValue("Basic", authenticationString);
+        bearerTokenRequest.Content = content;
+
+        try
+        {
+            var result = await client.SendAsync(bearerTokenRequest);
+            result.EnsureSuccessStatusCode();
+            return await result.Content.ReadFromJsonAsync<SpotifyToken>();
+
+        }
+        catch (HttpRequestException e)
+        {
+            Console.WriteLine("Exception Caught");
+            return null;
+        }
+        catch (Exception)
+        {
+            Console.WriteLine("Exception Caught");
+            return null;
+        }
+
     }
 }

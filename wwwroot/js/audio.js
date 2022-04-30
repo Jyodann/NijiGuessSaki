@@ -1,3 +1,5 @@
+const soundEffect = new Audio()
+
 function loadAudio(element, audioSource) {
     console.log(audioSource);
     element.src = audioSource;
@@ -15,7 +17,6 @@ function stopAudio(element) {
 function setVolume(element, volume) {
     element.volume = volume;
 }
-
 
 function returnDuration(element) {
     return element.currentTime.toString()

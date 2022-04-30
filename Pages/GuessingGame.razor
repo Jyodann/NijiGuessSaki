@@ -2,7 +2,7 @@
 @using System.Net.Http.Headers
 @inject IJSRuntime Js
 @using Data
-@using Microsoft.Extensions.Configuration
+
 @inject IConfiguration Configuration
 
 @inject IHttpClientFactory ClientFactory
@@ -11,6 +11,7 @@
 @if (song != null)
 {
     <h1>Niji-Guess-Saki</h1>
+    <h2>Debug Secret: @Configuration.GetSection("NGS:ClientId").Value</h2>
     <h3>Current Play Period: @CurrentTime seconds</h3>
     <h3>Song Started From: @SongPlaysFrom </h3>
     <input type="range" min="0" max="100" @bind-value=@Volume>
@@ -73,12 +74,6 @@
             //Authentication for Playlist:
             var client_id = Configuration.GetSection("NGS:ClientId").Value;
             var client_secret = Configuration.GetSection("NGS:ClientSecret").Value;
-
-            if (client_id == null)
-            {
-                client_id = Environment.GetEnvironmentVariable("NGS:ClientId");
-                client_secret = Environment.GetEnvironmentVariable("NGS:ClientSecret");
-            }
 
             var content = new FormUrlEncodedContent(new[] { new KeyValuePair<string, string>("grant_type", "client_credentials") });
             var authenticationString =

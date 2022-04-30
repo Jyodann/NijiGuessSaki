@@ -4,7 +4,6 @@ window.onload = (event) => {
     audioPlayer = document.getElementById("audioPlayer")
 }
 
-
 function iosUnlock() {
     audioPlayer.play()
     audioPlayer.pause()

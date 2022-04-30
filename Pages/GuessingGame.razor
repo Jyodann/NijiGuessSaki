@@ -74,6 +74,12 @@
             var client_id = Configuration.GetSection("NGS:ClientId").Value;
             var client_secret = Configuration.GetSection("NGS:ClientSecret").Value;
 
+            if (client_id == null)
+            {
+                client_id = Environment.GetEnvironmentVariable("NGS:ClientId");
+                client_secret = Environment.GetEnvironmentVariable("NGS:ClientSecret");
+            }
+
             var content = new FormUrlEncodedContent(new[] { new KeyValuePair<string, string>("grant_type", "client_credentials") });
             var authenticationString =
             Convert.ToBase64String(System.Text.ASCIIEncoding.ASCII.GetBytes($"{client_id}:{client_secret}"));

@@ -11,12 +11,12 @@
 @if (song != null)
 {
     <h1>Niji-Guess-Saki</h1>
-    <button id="iosUnlock" onclick="iosUnlock()">iOS Unlock</button>
+
     <h3>Current Play Period: @CurrentTime seconds</h3>
     <h3>Song Started From: @SongPlaysFrom </h3>
     <input type="range" min="0" max="100" @bind-value=@Volume>
     <br>
-    <button @onclick="@(() => PlayAudio(SongPlaysFrom))">
+    <button onclick="playAudio(@SongPlaysFrom)">
         Play Audio
     </button>
     <br>
@@ -28,7 +28,7 @@
     <br>
     <button @onclick="RefreshSong">Refresh Song</button>
     <br>
-    <audio id="audioPlayer" @ontimeupdate="TimeUpdate">
+    <audio id="audioPlayer" @ontimeupdate="TimeUpdate" @oncanplaythrough="CanPlayThrough">
     </audio>
     <br>
     @if (showSong)
@@ -165,5 +165,10 @@
         {
             StopAudio();
         }
+    }
+
+    private void CanPlayThrough()
+    {
+        Console.WriteLine("Can play through");
     }
 }

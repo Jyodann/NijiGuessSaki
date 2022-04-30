@@ -11,16 +11,16 @@
 @if (song != null)
 {
     <h1>Niji-Guess-Saki</h1>
-    <button onclick="soundEffect.play()">iOS Unlock</button>
+    <button id="iosUnlock" onclick="iosUnlock()">iOS Unlock</button>
     <h3>Current Play Period: @CurrentTime seconds</h3>
     <h3>Song Started From: @SongPlaysFrom </h3>
     <input type="range" min="0" max="100" @bind-value=@Volume>
     <br>
-    <button @onclick="@(() => PlayAudio(Audio, SongPlaysFrom))">
+    <button @onclick="@(() => PlayAudio(SongPlaysFrom))">
         Play Audio
     </button>
     <br>
-    <button @onclick="@(() => RevealSong(Audio))">
+    <button @onclick="@(() => RevealSong())">
         Reveal Song
     </button>
     <br>
@@ -28,12 +28,12 @@
     <br>
     <button @onclick="RefreshSong">Refresh Song</button>
     <br>
-    <audio @ref="@Audio" @ontimeupdate="TimeUpdate">
-</audio>
+    <audio id="audioPlayer" @ontimeupdate="TimeUpdate">
+    </audio>
     <br>
     @if (showSong)
     {
-        <img src="@song.track!.album!.images!.Where(x => x.height == 640).FirstOrDefault()!.url" width="400">
+        <img src="@song.track!.album!.images!.Where(x => x.height == 640).FirstOrDefault()!.url" width="350">
         <h1>@song.track.name</h1>
         <p1>Sung By: @String.Join(", " , song!.track!.artists!.Select(x=>x.name))</p1>
         <br>
@@ -52,7 +52,7 @@
         set
         {
             volume = value;
-            SetAudioVolume(Audio, value);
+            SetAudioVolume(value);
 
         }
     }
@@ -65,7 +65,7 @@
     public int SongPlaysFrom { get; set; } = 0;
     bool IsPlaying { get; set; }
 
-    private ElementReference Audio { get; set; }
+    //private ElementReference Audio { get; set; }
 
     protected async override void OnAfterRender(bool firstRender)
     {
@@ -101,30 +101,30 @@
             SongPlaysFrom = rnd.Next(0, 25);
             song = randomSong;
             StateHasChanged();
-            LoadAudio(Audio, randomSong!.track!.preview_url!);
-            SetAudioVolume(Audio, volume);
+            LoadAudio(randomSong!.track!.preview_url!);
+            SetAudioVolume(volume);
             Console.WriteLine(playListItems.items.Length);
         }
 
         base.OnAfterRender(firstRender);
     }
 
-    private void SetAudioVolume(ElementReference audioElement, int volume)
+    private void SetAudioVolume(int volume)
     {
         var newVol = volume / 100.0f;
-        Js.InvokeVoidAsync("setVolume", audioElement, newVol).GetAwaiter();
+        Js.InvokeVoidAsync("setVolume", newVol).GetAwaiter();
     }
-    private void PlayAudio(ElementReference audioElement, float startDuration)
+    private void PlayAudio(float startDuration)
     {
-        Js.InvokeVoidAsync("playAudio", audioElement, startDuration).GetAwaiter();
+        Js.InvokeVoidAsync("playAudio", startDuration).GetAwaiter();
     }
 
-    private void LoadAudio(ElementReference audioElement, string sourceLink) =>
-    Js.InvokeVoidAsync("loadAudio", audioElement, sourceLink).GetAwaiter();
+    private void LoadAudio(string sourceLink) =>
+    Js.InvokeVoidAsync("loadAudio", sourceLink).GetAwaiter();
 
 
-    private void StopAudio(ElementReference audioElement) =>
-    Js.InvokeVoidAsync("stopAudio", audioElement).GetAwaiter();
+    private void StopAudio() =>
+    Js.InvokeVoidAsync("stopAudio").GetAwaiter();
 
     public void IncreaseTime()
     {
@@ -141,29 +141,29 @@
         showSong = false;
         CurrentTime = 0.5f;
         SongPlaysFrom = rnd.Next(0, 25);
-        StopAudio(Audio);
-        LoadAudio(Audio, randomSong!.track!.preview_url!);
+        StopAudio();
+        LoadAudio(randomSong!.track!.preview_url!);
     }
 
-    public void RevealSong(ElementReference audioElement)
+    public void RevealSong()
     {
         showSong = !showSong;
 
         CurrentTime = 30.0f;
         if (showSong)
-            PlayAudio(audioElement, 0.0f);
+            PlayAudio(0.0f);
         else
-            StopAudio(audioElement);
+            StopAudio();
 
     }
     private async void TimeUpdate(EventArgs e)
     {
         if (showSong) return;
-        var result = await Js.InvokeAsync<string>("returnDuration", Audio);
+        var result = await Js.InvokeAsync<string>("returnDuration");
         var songDuration = float.Parse(result);
         if ((songDuration - SongPlaysFrom) > CurrentTime)
         {
-            StopAudio(Audio);
+            StopAudio();
         }
     }
 }

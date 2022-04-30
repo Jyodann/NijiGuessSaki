@@ -19,11 +19,19 @@
 
 <button @onclick=@TestValue disabled=@(PlaylistStatus.Contains("Checking"))>@PlaylistStatus</button>
 
+<audio hidden></audio>
 @code {
     public string SongLink { get; set; } = String.Empty;
     public string PlaylistStatus { get; set; } = "Check Playlist";
 
     public string ErrorMessage { get; set; } = string.Empty;
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        base.OnAfterRender(firstRender);
+        Js.InvokeVoidAsync("unlockAudio");
+    }
+
     public async void TestValue()
     {
         ErrorMessage = string.Empty;

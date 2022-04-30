@@ -11,7 +11,7 @@
 @if (song != null)
 {
     <h1>Niji-Guess-Saki</h1>
-    <button onclick="iosUnlock()">iOS Unlock</button>
+    <button id="iosUnlock" onclick="iosUnlock()">iOS Unlock</button>
     <h3>Current Play Period: @CurrentTime seconds</h3>
     <h3>Song Started From: @SongPlaysFrom </h3>
     <input type="range" min="0" max="100" @bind-value=@Volume>

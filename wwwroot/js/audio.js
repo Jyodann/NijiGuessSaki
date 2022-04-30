@@ -4,6 +4,8 @@ const soundEffect = new Audio("https://p.scdn.co/mp3-preview/3d26cfb135fb88e9dd2
 function iosUnlock() {
     document.getElementById("audioPlayer").play()
     document.getElementById("audioPlayer").pause()
+
+    document.getElementById("iosUnlock").disabled = true;
 }
 
 function loadAudio(audioSource) {

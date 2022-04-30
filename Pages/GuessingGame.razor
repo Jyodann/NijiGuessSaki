@@ -27,7 +27,7 @@
     <br>
     <button @onclick="RefreshSong">Refresh Song</button>
     <br>
-    <audio id="audioPlayer" @ontimeupdate="TimeUpdate" @oncanplaythrough="CanPlayThrough">
+    <audio id="audioPlayer" @ontimeupdate="TimeUpdate">
     </audio>
     <br>
     @if (showSong)
@@ -166,8 +166,4 @@
         }
     }
 
-    private void CanPlayThrough()
-    {
-        Console.WriteLine("Can play through");
-    }
 }

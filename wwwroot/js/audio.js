@@ -1,33 +1,20 @@
-const audioPlayer = null;
-
-window.onload = (event) => {
-    audioPlayer = document.getElementById("audioPlayer")
-}
-
-function iosUnlock() {
-    audioPlayer.play()
-    audioPlayer.pause()
-
-    document.getElementById("iosUnlock").disabled = true;
-}
-
 function loadAudio(audioSource) {
-    audioPlayer.src = audioSource
-    audioPlayer.load()
+    document.getElementById("audioPlayer").src = audioSource
+    document.getElementById("audioPlayer").load()
 }
 function playAudio(startDuration) {
-    audioPlayer.currentTime = startDuration;
-    audioPlayer.play();
+    document.getElementById("audioPlayer").currentTime = startDuration;
+    document.getElementById("audioPlayer").play();
 }
 function stopAudio() {
-    audioPlayer.pause();
-    audioPlayer.currentTime = 0;
+    document.getElementById("audioPlayer").pause();
+    document.getElementById("audioPlayer").currentTime = 0;
 }
 
 function setVolume(volume) {
-    audioPlayer.volume = volume;
+    document.getElementById("audioPlayer").volume = volume;
 }
 
 function returnDuration() {
-    return audioPlayer.currentTime.toString()
+    return document.getElementById("audioPlayer").currentTime.toString()
 }

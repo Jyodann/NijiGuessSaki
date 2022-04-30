@@ -8,7 +8,6 @@
 <PageTitle>NijiguesSaki</PageTitle>
 
 <h1>Setup Page</h1>
-
 <input type="text" @bind="SongLink">
 <p>@ErrorMessage</p>
 <br>
@@ -79,8 +78,8 @@
     public async Task<SpotifyToken?> GetSpotifyToken()
     {
         var client = ClientFactory.CreateClient();
-        var client_id = Configuration.GetSection("NGS:ClientId").Value;
-        var client_secret = Configuration.GetSection("NGS:ClientSecret").Value;
+        var client_id = Configuration.GetSection("NGSClientId").Value;
+        var client_secret = Configuration.GetSection("NGSClientSecret").Value;
 
         var content = new FormUrlEncodedContent(new[] { new KeyValuePair<string, string>("grant_type", "client_credentials") });
         var authenticationString =

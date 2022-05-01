@@ -1,23 +1,20 @@
-const soundEffect = new Audio()
-
-function loadAudio(element, audioSource) {
-    console.log(audioSource);
-    element.src = audioSource;
-    element.load()
+function loadAudio(audioSource) {
+    document.getElementById("audioPlayer").src = audioSource
+    document.getElementById("audioPlayer").load()
 }
-function playAudio(element, startDuration) {
-    element.currentTime = startDuration;
-    element.play();
+function playAudio(startDuration) {
+    document.getElementById("audioPlayer").currentTime = startDuration;
+    document.getElementById("audioPlayer").play();
 }
-function stopAudio(element) {
-    element.pause();
-    element.currentTime = 0;
+function stopAudio() {
+    document.getElementById("audioPlayer").pause();
+    document.getElementById("audioPlayer").currentTime = 0;
 }
 
-function setVolume(element, volume) {
-    element.volume = volume;
+function setVolume(volume) {
+    document.getElementById("audioPlayer").volume = volume;
 }
 
-function returnDuration(element) {
-    return element.currentTime.toString()
+function returnDuration() {
+    return document.getElementById("audioPlayer").currentTime.toString()
 }

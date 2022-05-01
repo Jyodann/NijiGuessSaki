@@ -7,12 +7,12 @@
 
 @inject IHttpClientFactory ClientFactory
 
-<PageTitle>NijiguesSaki</PageTitle>
+<PageTitle>Niji-Guess-Saki</PageTitle>
 @if (song != null)
 {
-    <h1>Niji-Guess-Saki</h1>
-    <h3>Current Play Period: @CurrentTime seconds</h3>
-    <h3>Song Started From: @SongPlaysFrom </h3>
+    <h1 class="text-2xl">Niji-Guess-Saki</h1>
+    <p>Current Play Period: @CurrentTime seconds</p>
+    <p>Song Started From: @SongPlaysFrom </p>
     <input type="range" min="0" max="100" @bind-value=@Volume>
     <br>
     <button onclick="playAudio(@SongPlaysFrom)">

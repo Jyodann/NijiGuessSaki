@@ -2,45 +2,86 @@
 @using System.Net.Http.Headers
 @inject IJSRuntime Js
 @using Data
-
 @inject IConfiguration Configuration
 
 @inject IHttpClientFactory ClientFactory
 
-<PageTitle>NijiguesSaki</PageTitle>
+<PageTitle>Niji-Guess-Saki</PageTitle>
+
+<head>
+
+</head>
 @if (song != null)
 {
-    <h1>Niji-Guess-Saki</h1>
-    <h3>Current Play Period: @CurrentTime seconds</h3>
-    <h3>Song Started From: @SongPlaysFrom </h3>
-    <input type="range" min="0" max="100" @bind-value=@Volume>
-    <br>
-    <button onclick="playAudio(@SongPlaysFrom)">
-        Play Audio
-    </button>
-    <br>
-    <button @onclick="@(() => RevealSong())">
-        Reveal Song
-    </button>
-    <br>
-    <button @onclick="IncreaseTime">Increase Time</button>
-    <br>
-    <button @onclick="RefreshSong">Refresh Song</button>
-    <br>
-    <audio id="audioPlayer" @ontimeupdate="TimeUpdate">
-    </audio>
-    <br>
-    @if (showSong)
-    {
-        <img src="@song.track!.album!.images!.Where(x => x.height == 640).FirstOrDefault()!.url" width="350">
-        <h1>@song.track.name</h1>
-        <p1>Sung By: @String.Join(", " , song!.track!.artists!.Select(x=>x.name))</p1>
-        <br>
-        <p1>Album: @song!.track!.album.name</p1>
-    }
-}
 
+    <body class="font-body">
+
+        <div class="grid grid-cols-3 place-items-center gap-y-4">
+            <span class="material-icons">play_circle</span>
+            <span class="material-icons">fast_forward</span>
+            <span class="material-icons">schedule</span>
+
+
+            <PlayerComponent MinSeconds=0.0 MaxSeconds=30.0 CurrentTime=@CurrentPlayTime></PlayerComponent>
+
+
+            <p>Start: @SongPlaysFrom.ToString("00:00")</p>
+            <p>Length: @SectionLength s</p>
+        </div>
+
+        <div class="flex py-2.5">
+            <span class="material-icons">volume_up</span>
+            <input type="range" min="0" max="100" @bind-value=@Volume class="w-full ml-2">
+        </div>
+
+
+
+
+        <div class="flex py-2">
+            <button class="bg-pink-500 hover:bg-pink-700 btn w-1/2 mr-2" onclick="playAudio(@SongPlaysFrom)">
+                Play Section
+            </button>
+            <button class="bg-pink-500 hover:bg-pink-700 btn w-1/2" @onclick="IncreaseTime">Increase Time</button>
+        </div>
+
+        @if (!showSong)
+        {
+            <button class="bg-orange-500 hover:bg-orange-700 btn w-full" @onclick="@(() => RevealSong())">
+                Reveal Song
+            </button>
+        }
+        else
+        {
+            <button class="bg-orange-500 hover:bg-orange-700 btn w-full" @onclick="RefreshSong">Refresh
+                Song</button>
+        }
+
+        <div class="flex py-2">
+            <button class="bg-orange-500 hover:bg-orange-700 btn w-full" @onclick="RefreshSong">Force Refresh
+                Song</button>
+        </div>
+
+
+        @if (showSong)
+        {
+            <SongComponent song=@song></SongComponent>
+            <div class="flex py-2">
+                <button class="bg-green-500 hover:bg-green-700 btn w-full py-2" onclick="playAudio(0.0)">
+                    Play From Beginning
+                </button>
+            </div>
+        }
+
+        <audio id="audioPlayer" @ontimeupdate="TimeUpdate" @onplaying="OnPlaying" @onpause="OnStop"></audio>
+
+
+    </body>
+
+}
 @code {
+    public string PlayingMessage { get; set; } = "";
+    public double SectionLength = 1.0;
+    public double CurrentPlayTime = 0.0;
     private int volume = 15;
     public int Volume
     {
@@ -55,11 +96,23 @@
 
         }
     }
-    public Song? song = null;
+    private Song _song = new Song();
+    public Song song
+    {
+        get
+        {
+            return _song;
+        }
+        set
+        {
+            _song = value;
+            LoadAudio(_song.track!.preview_url!);
+        }
+    }
 
-    public SpotifyPlaylist? playListItems = null;
+    public List<Song> playListItems = new List<Song>();
     public bool showSong { get; set; } = false;
-    public float CurrentTime { get; set; } = 0.5f;
+
 
     public int SongPlaysFrom { get; set; } = 0;
     bool IsPlaying { get; set; }
@@ -92,17 +145,16 @@
             $"https://api.spotify.com/v1/playlists/{playList_id}/tracks?fields=items(track(name%2Cid%2Cpreview_url%2Cartists(name)%2Calbum(images%2Cname)))");
             songRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token?.access_token);
             var loveliveItem = await client.SendAsync(songRequest);
-            playListItems = await loveliveItem.Content.ReadFromJsonAsync<SpotifyPlaylist>();
+            var spotifyPlaylist = await loveliveItem.Content.ReadFromJsonAsync<SpotifyPlaylist>();
+            playListItems = spotifyPlaylist.items.Where(x => x.track.preview_url != null).ToList();
 
-            Random rnd = new Random();
-            var randomSongNum = rnd.Next(0, playListItems!.items!.Length);
-            var randomSong = playListItems.items[randomSongNum]!;
-            SongPlaysFrom = rnd.Next(0, 25);
+            var randomSongNum = Random.Shared.Next(0, playListItems.Count);
+            var randomSong = playListItems[randomSongNum];
+            SongPlaysFrom = Random.Shared.Next(0, 25);
+            CurrentPlayTime = SongPlaysFrom;
             song = randomSong;
-            StateHasChanged();
-            LoadAudio(randomSong!.track!.preview_url!);
+
             SetAudioVolume(volume);
-            Console.WriteLine(playListItems.items.Length);
         }
 
         base.OnAfterRender(firstRender);
@@ -118,52 +170,67 @@
         Js.InvokeVoidAsync("playAudio", startDuration).GetAwaiter();
     }
 
-    private void LoadAudio(string sourceLink) =>
-    Js.InvokeVoidAsync("loadAudio", sourceLink).GetAwaiter();
-
+    private void LoadAudio(string sourceLink)
+    {
+        Console.WriteLine("Force Audio Load");
+        Js.InvokeVoidAsync("loadAudio", sourceLink).GetAwaiter();
+    }
 
     private void StopAudio() =>
     Js.InvokeVoidAsync("stopAudio").GetAwaiter();
 
     public void IncreaseTime()
     {
-        CurrentTime += 0.5f;
+        SectionLength += 0.5f;
     }
     public void RefreshSong()
     {
-        Random rnd = new Random();
-        var randomSongNum = rnd.Next(0, playListItems!.items!.Length);
-        var randomSong = playListItems.items[randomSongNum]!;
+        var randomSongNum = Random.Shared.Next(0, playListItems.Count);
+        var randomSong = playListItems[randomSongNum];
 
         song = randomSong;
 
         showSong = false;
-        CurrentTime = 0.5f;
-        SongPlaysFrom = rnd.Next(0, 25);
+        SectionLength = 0.5f;
+        SongPlaysFrom = Random.Shared.Next(0, 25);
+        CurrentPlayTime = SongPlaysFrom;
         StopAudio();
-        LoadAudio(randomSong!.track!.preview_url!);
     }
 
     public void RevealSong()
     {
         showSong = !showSong;
-
-        CurrentTime = 30.0f;
         if (showSong)
-            PlayAudio(0.0f);
+            PlayAudio(SongPlaysFrom);
         else
             StopAudio();
-
     }
     private async void TimeUpdate(EventArgs e)
     {
-        if (showSong) return;
         var result = await Js.InvokeAsync<string>("returnDuration");
-        var songDuration = float.Parse(result);
-        if ((songDuration - SongPlaysFrom) > CurrentTime)
+        var time = double.Parse(result);
+        if (!showSong)
         {
-            StopAudio();
+            if ((time - SongPlaysFrom) > SectionLength)
+            {
+                StopAudio();
+            }
         }
+
+        if (time == 0)
+        {
+            return;
+        }
+        CurrentPlayTime = time;
     }
 
+    private void OnPlaying()
+    {
+        PlayingMessage = "Now Playing";
+    }
+
+    private void OnStop()
+    {
+        PlayingMessage = "Audio Stopped";
+    }
 }

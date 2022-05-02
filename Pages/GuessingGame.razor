@@ -16,35 +16,71 @@
 
     <body class="font-body">
 
-        <p>Current Play Period: @CurrentTime seconds</p>
-        <p>Song Started From: @SongPlaysFrom </p>
-        <input type="range" min="0" max="100" @bind-value=@Volume>
-        <br>
-        <button onclick="playAudio(@SongPlaysFrom)">
-            Play
-        </button>
-        <br>
-        <button @onclick="@(() => RevealSong())">
-            Reveal Song
-        </button>
-        <br>
-        <button @onclick="IncreaseTime">Increase Time</button>
-        <br>
-        <button @onclick="RefreshSong">Refresh Song</button>
-        <br>
-        <PlayerComponent MinSeconds=0.0 MaxSeconds=30.0 CurrentTime=@CurrentPlayTime></PlayerComponent>
+        <div class="grid grid-cols-3 place-items-center gap-y-4">
+            <span class="material-icons">play_circle</span>
+            <span class="material-icons">fast_forward</span>
+            <span class="material-icons">schedule</span>
+
+
+            <PlayerComponent MinSeconds=0.0 MaxSeconds=30.0 CurrentTime=@CurrentPlayTime></PlayerComponent>
+
+
+            <p>Start: @SongPlaysFrom.ToString("00:00")</p>
+            <p>Length: @SectionLength s</p>
+        </div>
+
+        <div class="flex py-2.5">
+            <span class="material-icons">volume_up</span>
+            <input type="range" min="0" max="100" @bind-value=@Volume class="w-full ml-2">
+        </div>
+
+
+
+
+        <div class="flex py-2">
+            <button class="bg-pink-500 hover:bg-pink-700 btn w-1/2 mr-2" onclick="playAudio(@SongPlaysFrom)">
+                Play Section
+            </button>
+            <button class="bg-pink-500 hover:bg-pink-700 btn w-1/2" @onclick="IncreaseTime">Increase Time</button>
+        </div>
+
+        @if (!showSong)
+        {
+            <button class="bg-orange-500 hover:bg-orange-700 btn w-full" @onclick="@(() => RevealSong())">
+                Reveal Song
+            </button>
+        }
+        else
+        {
+            <button class="bg-orange-500 hover:bg-orange-700 btn w-full" @onclick="RefreshSong">Refresh
+                Song</button>
+        }
+
+        <div class="flex py-2">
+            <button class="bg-orange-500 hover:bg-orange-700 btn w-full" @onclick="RefreshSong">Force Refresh
+                Song</button>
+        </div>
+
+
         @if (showSong)
         {
             <SongComponent song=@song></SongComponent>
-
+            <div class="flex py-2">
+                <button class="bg-green-500 hover:bg-green-700 btn w-full py-2" onclick="playAudio(0.0)">
+                    Play From Beginning
+                </button>
+            </div>
         }
 
-        <audio id="audioPlayer" @ontimeupdate="TimeUpdate" controls="controls"></audio>
+        <audio id="audioPlayer" @ontimeupdate="TimeUpdate" @onplaying="OnPlaying" @onpause="OnStop"></audio>
+
+
     </body>
 
 }
 @code {
-    public double CurrentTime = 1.0;
+    public string PlayingMessage { get; set; } = "";
+    public double SectionLength = 1.0;
     public double CurrentPlayTime = 0.0;
     private int volume = 15;
     public int Volume
@@ -74,7 +110,7 @@
         }
     }
 
-    public SpotifyPlaylist? playListItems = null;
+    public List<Song> playListItems = new List<Song>();
     public bool showSong { get; set; } = false;
 
 
@@ -109,15 +145,15 @@
             $"https://api.spotify.com/v1/playlists/{playList_id}/tracks?fields=items(track(name%2Cid%2Cpreview_url%2Cartists(name)%2Calbum(images%2Cname)))");
             songRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token?.access_token);
             var loveliveItem = await client.SendAsync(songRequest);
-            playListItems = await loveliveItem.Content.ReadFromJsonAsync<SpotifyPlaylist>();
+            var spotifyPlaylist = await loveliveItem.Content.ReadFromJsonAsync<SpotifyPlaylist>();
+            playListItems = spotifyPlaylist.items.Where(x => x.track.preview_url != null).ToList();
 
-
-            var randomSongNum = Random.Shared.Next(0, playListItems!.items!.Length);
-            var randomSong = playListItems.items[randomSongNum]!;
+            var randomSongNum = Random.Shared.Next(0, playListItems.Count);
+            var randomSong = playListItems[randomSongNum];
             SongPlaysFrom = Random.Shared.Next(0, 25);
             CurrentPlayTime = SongPlaysFrom;
             song = randomSong;
-            StateHasChanged();
+
             SetAudioVolume(volume);
         }
 
@@ -140,26 +176,23 @@
         Js.InvokeVoidAsync("loadAudio", sourceLink).GetAwaiter();
     }
 
-
-
     private void StopAudio() =>
     Js.InvokeVoidAsync("stopAudio").GetAwaiter();
 
     public void IncreaseTime()
     {
-        CurrentTime += 0.5f;
+        SectionLength += 0.5f;
     }
     public void RefreshSong()
     {
-        Random rnd = new Random();
-        var randomSongNum = rnd.Next(0, playListItems!.items!.Length);
-        var randomSong = playListItems.items[randomSongNum]!;
+        var randomSongNum = Random.Shared.Next(0, playListItems.Count);
+        var randomSong = playListItems[randomSongNum];
 
         song = randomSong;
 
         showSong = false;
-        CurrentTime = 0.5f;
-        SongPlaysFrom = rnd.Next(0, 25);
+        SectionLength = 0.5f;
+        SongPlaysFrom = Random.Shared.Next(0, 25);
         CurrentPlayTime = SongPlaysFrom;
         StopAudio();
     }
@@ -167,26 +200,37 @@
     public void RevealSong()
     {
         showSong = !showSong;
-
-        CurrentTime = 30.0f;
         if (showSong)
-            PlayAudio(0.0f);
+            PlayAudio(SongPlaysFrom);
         else
             StopAudio();
-
     }
     private async void TimeUpdate(EventArgs e)
     {
         var result = await Js.InvokeAsync<string>("returnDuration");
-
         var time = double.Parse(result);
+        if (!showSong)
+        {
+            if ((time - SongPlaysFrom) > SectionLength)
+            {
+                StopAudio();
+            }
+        }
 
         if (time == 0)
         {
             return;
         }
-
         CurrentPlayTime = time;
     }
 
+    private void OnPlaying()
+    {
+        PlayingMessage = "Now Playing";
+    }
+
+    private void OnStop()
+    {
+        PlayingMessage = "Audio Stopped";
+    }
 }

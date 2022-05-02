@@ -1,0 +1,16 @@
+<div class="w-full flex items-center">
+    <p>@( ((int)(CurrentTime / 60)).ToString("00") ):@((CurrentTime % 60).ToString("00"))</p>
+    <input class="w-full m-2" type="range" min=@MinSeconds max=@MaxSeconds @bind-value=@CurrentTime>
+    <p>@( ((int)(MaxSeconds / 60)).ToString("00") ):@((MaxSeconds % 60).ToString("00"))</p>
+</div>
+
+@code {
+    [Parameter]
+    public double MinSeconds { get; set; } = 0.0;
+
+    [Parameter]
+    public double MaxSeconds { get; set; } = 0.0;
+
+    [Parameter]
+    public double CurrentTime { get; set; } = 0.0;
+}

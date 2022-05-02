@@ -1,15 +1,11 @@
-﻿@inherits LayoutComponentBase
-<PageTitle>Niji-Guess-Saki</PageTitle>
-
-<nav class="bg-gray-500 px-8 py-3 justify-between items-center sm:flex">
-    <div class="flex justify-between items-center">
+<header class="bg-gray-800 sm:flex sm:justify-between sm:px-4 sm:py-2 sm:items-center">
+    <div class="flex px-4 py-2 items-center justify-between sm:p-0">
         <div>
             <a href="/guess">
-                <img src="NijiLogo.png" alt="Game Logo">
+                <img class="h-12" src="NijiLogo.png">
             </a>
-
         </div>
-        <!-- Right Side of Navigation bar, Mobile:--->
+
         <div class="sm:hidden">
             <button type="button" class="text-white" @onclick="() => isOpen = !isOpen">
                 <svg class="h-6 w-6 fill-current" viewBox="0 0 24 24">
@@ -27,24 +23,13 @@
             </button>
         </div>
     </div>
-    <!-- Left Side of Navigation bar--->
-
-    <!-- Nav Items --->
-    <div class="sm:flex @(isOpen ? "block" : "hidden")">
+    <div class="sm:flex sm:p-0 @(isOpen ? "block" : "hidden")">
         <a href="#" class="block sm:ml-2 px-2 py-2 text-white font-semibold hover:bg-gray-700 rounded">Home</a>
         <a href="#" class="block sm:ml-2 px-2 py-2 text-white font-semibold hover:bg-gray-700 rounded">Guess!</a>
         <a href="#" class="block sm:ml-2 px-2 py-2 text-white font-semibold hover:bg-gray-700 rounded">Settings</a>
     </div>
-</nav>
 
-
-<div class="page">
-    <main>
-        <article class="content px-4">
-            @Body
-        </article>
-    </main>
-</div>
+</header>
 
 @code {
     public bool isOpen = false;

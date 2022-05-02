@@ -1,7 +1,11 @@
 module.exports = {
   content: ["**/*.razor", "**/*.cshtml", "**/*.html"],
   theme: {
-    extend: {},
+    extend: {
+      fontFamily: {
+        body: ['Open Sans']
+      }
+    },
   },
   plugins: [],
 }

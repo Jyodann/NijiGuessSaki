@@ -1,0 +1,15 @@
+<div class="flex items-center shadow-md bg-pink-200 rounded-lg p-2">
+    <img src="@song!.track!.album!.images!.Where(x => x.height == 640).FirstOrDefault()!.url" class="rounded-lg w-1/3">
+
+    <div class="ml-4 flex-col w-2/3">
+        <h1 class="font-bold text-2xl">@song.track.name</h1>
+        <p1 class="block">By: @String.Join(", " , song!.track!.artists!.Select(x=>x.name))</p1>
+        <p1 class="block">Album: @song!.track!.album.name</p1>
+    </div>
+</div>
+
+
+@code {
+    [Parameter]
+    public Song? song { get; set; }
+}

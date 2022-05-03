@@ -16,35 +16,35 @@
 
     <body class="font-body">
 
-        <div class="grid grid-cols-3 place-items-center gap-y-4">
-            <span class="material-icons">play_circle</span>
-            <span class="material-icons">fast_forward</span>
-            <span class="material-icons">schedule</span>
+    <div class="grid grid-cols-3 place-items-center gap-y-4">
+        <span class="material-icons">play_circle</span>
+        <span class="material-icons">fast_forward</span>
+        <span class="material-icons">schedule</span>
 
 
-            <PlayerComponent MinSeconds=0.0 MaxSeconds=30.0 CurrentTime=@CurrentPlayTime></PlayerComponent>
+        <PlayerComponent MinSeconds=0.0 MaxSeconds=30.0 CurrentTime=@CurrentPlayTime></PlayerComponent>
 
 
-            <p>Start: @SongPlaysFrom.ToString("00:00")</p>
-            <p>Length: @SectionLength s</p>
-        </div>
+        <p>Start: @SongPlaysFrom.ToString("00:00")</p>
+        <p>Length: @SectionLength s</p>
+    </div>
 
-        <div class="flex py-2.5">
-            <span class="material-icons">volume_up</span>
-            <input type="range" min="0" max="100" @bind-value=@Volume class="w-full ml-2">
-        </div>
-
-
+    <div class="flex py-2.5">
+        <span class="material-icons">volume_up</span>
+        <input type="range" min="0" max="100" @bind-value=@Volume class="w-full ml-2">
+    </div>
 
 
-        <div class="flex py-2">
-            <button class="bg-pink-500 hover:bg-pink-700 btn w-1/2 mr-2" onclick="playAudio(@SongPlaysFrom)">
-                Play Section
-            </button>
-            <button class="bg-pink-500 hover:bg-pink-700 btn w-1/2" @onclick="IncreaseTime">Increase Time</button>
-        </div>
 
-        @if (!showSong)
+
+    <div class="flex py-2">
+        <button class="bg-pink-500 hover:bg-pink-700 btn w-1/2 mr-2" onclick="playAudio(@SongPlaysFrom)">
+            Play Section
+        </button>
+        <button class="bg-pink-500 hover:bg-pink-700 btn w-1/2" @onclick="IncreaseTime">Increase Time</button>
+    </div>
+
+    @if (!showSong)
         {
             <button class="bg-orange-500 hover:bg-orange-700 btn w-full" @onclick="@(() => RevealSong())">
                 Reveal Song
@@ -66,10 +66,10 @@
         {
             <SongComponent song=@song></SongComponent>
             <div class="flex py-2">
-                <button class="bg-green-500 hover:bg-green-700 btn w-full py-2" onclick="playAudio(0.0)">
-                    Play From Beginning
-                </button>
-            </div>
+        <button class="bg-green-500 hover:bg-green-700 btn w-full py-2" onclick="playAudio(0.0)">
+            Play From Beginning
+        </button>
+    </div>
         }
 
         <audio id="audioPlayer" @ontimeupdate="TimeUpdate" @onplaying="OnPlaying" @onpause="OnStop"></audio>
@@ -126,27 +126,18 @@
             //Authentication for Playlist:
             var client_id = Configuration.GetSection("NGSClientId").Value;
             var client_secret = Configuration.GetSection("NGSClientSecret").Value;
-
-            var content = new FormUrlEncodedContent(new[] { new KeyValuePair<string, string>("grant_type", "client_credentials") });
-            var authenticationString =
-            Convert.ToBase64String(System.Text.ASCIIEncoding.ASCII.GetBytes($"{client_id}:{client_secret}"));
-
-            var bearerTokenRequest = new HttpRequestMessage(HttpMethod.Post, "https://accounts.spotify.com/api/token");
-            bearerTokenRequest.Headers.Authorization = new AuthenticationHeaderValue("Basic", authenticationString);
-            bearerTokenRequest.Content = content;
             var client = ClientFactory.CreateClient();
-            var result = await client.SendAsync(bearerTokenRequest);
-            var token = await result.Content.ReadFromJsonAsync<SpotifyToken>();
 
+            var tokenRequest = await client.SendAsync(Endpoints.GetToken(client_id, client_secret));
+            var token = await tokenRequest.Content.ReadFromJsonAsync<SpotifyToken>();
 
-            // Get Song:
-            var playList_id = "7ulKXEl7j07T22foLPNzvU";
-            var songRequest = new HttpRequestMessage(HttpMethod.Get,
-            $"https://api.spotify.com/v1/playlists/{playList_id}/tracks?fields=items(track(name%2Cid%2Cpreview_url%2Cartists(name)%2Calbum(images%2Cname)))");
-            songRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token?.access_token);
-            var loveliveItem = await client.SendAsync(songRequest);
-            var spotifyPlaylist = await loveliveItem.Content.ReadFromJsonAsync<SpotifyPlaylist>();
-            playListItems = spotifyPlaylist.items.Where(x => x.track.preview_url != null).ToList();
+            var playlistInfoRequest = await client.SendAsync(Endpoints.GetPlayListInfo(token, "7ulKXEl7j07T22foLPNzvU"));
+            var playListInfo = await playlistInfoRequest.Content.ReadFromJsonAsync<PlaylistInfo>();
+
+            var playListSongRequest = await client.SendAsync(Endpoints.GetPlayListSongs(token, playListInfo.id));
+            var playListSongs = await playListSongRequest.Content.ReadFromJsonAsync<SpotifyPlaylist>();
+
+            playListItems = playListSongs.items.Where(x => x.track.preview_url != null).ToList();
 
             var randomSongNum = Random.Shared.Next(0, playListItems.Count);
             var randomSong = playListItems[randomSongNum];
@@ -155,6 +146,7 @@
             song = randomSong;
 
             SetAudioVolume(volume);
+            StateHasChanged();
         }
 
         base.OnAfterRender(firstRender);

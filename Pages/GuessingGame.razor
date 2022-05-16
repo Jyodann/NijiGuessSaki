@@ -14,7 +14,7 @@
 @if (playlistMetadata != null)
 {
     <p class="text-center text-2xl font-semibold">@playlistMetadata.name</p>
-    <p class="text-center text-lg">By: @playlistMetadata.owner.display_name</p>
+    <p class="text-center text-lg">By: @playlistMetadata.owner!.display_name</p>
 }
 @if (playListItems.Count != 0)
 {
@@ -72,7 +72,7 @@
         }
 
         <audio id="audioPlayer" @ontimeupdate="TimeUpdate" @onplaying="OnPlaying" @onpause="OnStop"
-        src=@song.track.preview_url></audio>
+        src=@song!.track!.preview_url></audio>
     </body>
 }
 else
@@ -134,7 +134,7 @@ else
                 spotifyToken = await GetSpotifyToken();
                 playlistMetadata = JsonConvert.DeserializeObject<PlaylistInfo>(playlistMetadataFromStorage.Value!);
 
-                playListItems = await LoadSongs(spotifyToken!, playlistMetadata!);
+                playListItems = (await LoadSongs(spotifyToken!, playlistMetadata!))!;
 
                 RefreshSong();
                 StateHasChanged();
@@ -219,7 +219,7 @@ else
         PlayingMessage = "Audio Stopped";
     }
 
-    public async Task<List<Song>> LoadSongs(SpotifyToken token, PlaylistInfo playlistMetadata)
+    public async Task<List<Song>?> LoadSongs(SpotifyToken token, PlaylistInfo playlistMetadata)
     {
         var playlistSongs = new List<Song>();
         var client = ClientFactory.CreateClient();

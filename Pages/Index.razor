@@ -29,7 +29,7 @@
     <img src=@playlistMetadata.images?.First().url height="300" width="300">
     <p>Name: @playlistMetadata.name</p>
     <p>Owner: @playlistMetadata?.owner?.display_name</p>
-    <p>Number of Tracks: @playlistMetadata.tracks.total</p>
+    <p>Number of Tracks: @playlistMetadata!.tracks!.total</p>
     <p>Loaded @playListItems?.Count Songs that have Preview Links</p>
     <button class="bg-pink-500 hover:bg-pink-700 btn" @onclick=@ShowSongs>Show Songs</button>
 }
@@ -37,7 +37,7 @@
 @if (showSong)
 {
     <div class="w-1/3 h-48 overflow-y-auto">
-        @foreach (var item in playListItems)
+        @foreach (var item in playListItems!)
         {
             <SongComponent song=@item loadImg="true"></SongComponent>
         }
@@ -113,7 +113,7 @@
 
     public async void LoadSongs()
     {
-        playListItems.Clear();
+        playListItems!.Clear();
         var client = ClientFactory.CreateClient();
         var initialRequestTask = new List<Task<HttpResponseMessage>>();
         for (int i = 0; i < playlistMetadata?.tracks?.total; i += 100)

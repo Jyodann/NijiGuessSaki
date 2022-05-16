@@ -4,30 +4,39 @@
 @using System.Net.Http.Headers
 @inject IConfiguration Configuration
 @inject IHttpClientFactory ClientFactory
+@using Newtonsoft.Json
+@using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage
+@inject ProtectedLocalStorage ProtectedLocalStorage
 
 <PageTitle>Niji-Guess-Saki</PageTitle>
+<div class="flex flex-col gap-2">
+    <h1 class="text-lg">Spotify Playlist Link:</h1>
+    <input class="outline outline-1 py-2 px-4" type="text" @bind="SongLink" placeholder="Paste Spotify Link here">
+    <p>@ErrorMessage</p>
+    <button class="bg-pink-500 hover:bg-pink-700 btn" @onclick=@TestValue
+        disabled=@(PlaylistStatus.Contains("Checking"))>@PlaylistStatus</button>
+</div>
 
-<h1 class="text-lg">Setup Page</h1>
-<input class="outline" type="text" @bind="SongLink">
-<p>@ErrorMessage</p>
-<br>
-<p>You may paste these types of links:</p>
-<ul>
-    <li>Spotify Playlist Link, e.g.: https://open.spotify.com/playlist/7ulKXEl7j07T22foLPNzvU?si=5a7d6176fb0547f7</li>
-    <li>Playlist Id, e.g.: 7ulKXEl7j07T22foLPNzvU</li>
-</ul>
+@if (playlistMetadata is not null)
+{
+    <img src=@playlistMetadata.images?.First().url height="150" width="150">
+    <p>Name: @playlistMetadata.name</p>
+    <p>Owner: @playlistMetadata?.owner?.display_name</p>
+    <p>Number of Tracks: @playlistMetadata!.tracks!.total</p>
+    <p>@playListItems?.Count Songs have Preview Links</p>
+}
 
-<button @onclick=@TestValue disabled=@(PlaylistStatus.Contains("Checking"))>@PlaylistStatus</button>
-
-<audio hidden></audio>
 @code {
+    public bool showSong { get; set; } = false;
+    public SpotifyToken? spotifyToken = null;
+    public PlaylistInfo? playlistMetadata = null;
+    public List<Song>? playListItems = new List<Song>();
     public string SongLink { get; set; } = String.Empty;
     public string PlaylistStatus { get; set; } = "Check Playlist";
-
     public string ErrorMessage { get; set; } = string.Empty;
-
     public async void TestValue()
     {
+        playlistMetadata = null;
         ErrorMessage = string.Empty;
         PlaylistStatus = "Checking Playlist";
 
@@ -35,28 +44,37 @@
         if (SongLink.Equals(string.Empty))
         {
             ErrorMessage = "No link was pasted";
+            PlaylistStatus = "Check Playlist";
             return;
         }
         // Check if Starts with Spotify Link:
         if (!SongLink.StartsWith("https://open.spotify.com/playlist/") && SongLink.Length > 22)
         {
             ErrorMessage = "Invalid Spotify Link detected";
+            PlaylistStatus = "Check Playlist";
+            return;
         }
         try
         {
             var tempSongLink = SongLink.Replace("https://open.spotify.com/playlist/", string.Empty);
             tempSongLink = tempSongLink.Substring(0, 22);
-            var token = await GetSpotifyToken();
+            spotifyToken = await GetSpotifyToken();
 
-            if (token is null)
+            if (spotifyToken is null)
             {
                 ErrorMessage = "Unable to communicate with Spotify Servers.";
             }
             else
             {
-
+                var client = ClientFactory.CreateClient();
+                var playListInfoRequest = await client.SendAsync(Endpoints.GetPlayListInfo(spotifyToken, tempSongLink));
+                var playListInfo = await playListInfoRequest.Content.ReadFromJsonAsync<PlaylistInfo>();
+                playlistMetadata = playListInfo;
+                var jsonData = JsonConvert.SerializeObject(playlistMetadata);
+                Console.WriteLine(jsonData);
+                await ProtectedLocalStorage.SetAsync("songData", jsonData);
+                LoadSongs();
             }
-
         }
         catch (ArgumentOutOfRangeException)
         {
@@ -68,13 +86,50 @@
         }
         finally
         {
-
             PlaylistStatus = "Check Playlist";
-
         }
 
         PlaylistStatus = "Check Playlist";
         StateHasChanged();
+    }
+
+    public async void LoadSongs()
+    {
+        playListItems!.Clear();
+        var client = ClientFactory.CreateClient();
+        var initialRequestTask = new List<Task<HttpResponseMessage>>();
+        for (int i = 0; i < playlistMetadata?.tracks?.total; i += 100)
+        {
+            initialRequestTask.Add(client.SendAsync(Endpoints.GetPlayListSongs(spotifyToken, playlistMetadata?.id!, i)));
+        }
+        var completeRequests = await Task.WhenAll(initialRequestTask);
+
+        if (completeRequests.Where(x => x.IsSuccessStatusCode == false).Any())
+        {
+            Console.WriteLine("Error Loading Songs");
+            return;
+        }
+
+        var completeSongList = new List<Task<SpotifyPlaylist?>>();
+
+        foreach (var songRequest in completeRequests)
+        {
+            completeSongList.Add(songRequest.Content.ReadFromJsonAsync<SpotifyPlaylist>());
+        }
+
+        var playlists = await Task.WhenAll(completeSongList);
+
+        foreach (var playlist in playlists)
+        {
+            playListItems.AddRange(playlist!.items!.Where(x => x.track.preview_url != null));
+        }
+
+        StateHasChanged();
+    }
+
+    public void ShowSongs()
+    {
+        showSong = !showSong;
     }
 
     public async Task<SpotifyToken?> GetSpotifyToken()
@@ -82,11 +137,9 @@
         var client = ClientFactory.CreateClient();
         var client_id = Configuration.GetSection("NGSClientId").Value;
         var client_secret = Configuration.GetSection("NGSClientSecret").Value;
-
         var content = new FormUrlEncodedContent(new[] { new KeyValuePair<string, string>("grant_type", "client_credentials") });
         var authenticationString =
         Convert.ToBase64String(System.Text.ASCIIEncoding.ASCII.GetBytes($"{client_id}:{client_secret}"));
-
         var bearerTokenRequest = new HttpRequestMessage(HttpMethod.Post, "https://accounts.spotify.com/api/token");
         bearerTokenRequest.Headers.Authorization = new AuthenticationHeaderValue("Basic", authenticationString);
         bearerTokenRequest.Content = content;
@@ -108,6 +161,5 @@
             Console.WriteLine("Exception Caught");
             return null;
         }
-
     }
 }

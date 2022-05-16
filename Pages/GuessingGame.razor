@@ -1,88 +1,107 @@
 @page "/guess"
-@using System.Net.Http.Headers
 @inject IJSRuntime Js
 @using Data
+@using System.Net.Http.Headers
 @inject IConfiguration Configuration
-
 @inject IHttpClientFactory ClientFactory
+@using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage
+@inject ProtectedLocalStorage ProtectedLocalStorage
+@using Newtonsoft.Json
+@inject NavigationManager NavigationManager
 
 <PageTitle>Niji-Guess-Saki</PageTitle>
 
-<head>
-
-</head>
-@if (song != null)
+@if (playListItems.Count != 0)
 {
 
-    <body class="font-body">
-
-        <div class="grid grid-cols-3 place-items-center gap-y-4">
+    <body class="font-body h-full">
+        @if (playlistMetadata != null)
+        {
+            <p class="text-center text-2xl font-semibold truncate">@playlistMetadata.name</p>
+            <p class="text-center text-lg">By: @playlistMetadata.owner!.display_name</p>
+        }
+        <div class="grid grid-cols-3 place-items-center gap-y-4 py-2">
             <span class="material-icons">play_circle</span>
             <span class="material-icons">fast_forward</span>
             <span class="material-icons">schedule</span>
 
-
             <PlayerComponent MinSeconds=0.0 MaxSeconds=30.0 CurrentTime=@CurrentPlayTime></PlayerComponent>
-
 
             <p>Start: @SongPlaysFrom.ToString("00:00")</p>
             <p>Length: @SectionLength s</p>
         </div>
 
-        <div class="flex py-2.5">
-            <span class="material-icons">volume_up</span>
-            <input type="range" min="0" max="100" @bind-value=@Volume class="w-full ml-2">
-        </div>
-
-
-
-
-        <div class="flex py-2">
-            <button class="bg-pink-500 hover:bg-pink-700 btn w-1/2 mr-2" onclick="playAudio(@SongPlaysFrom)">
-                Play Section
-            </button>
-            <button class="bg-pink-500 hover:bg-pink-700 btn w-1/2" @onclick="IncreaseTime">Increase Time</button>
-        </div>
-
-        @if (!showSong)
-        {
-            <button class="bg-orange-500 hover:bg-orange-700 btn w-full" @onclick="@(() => RevealSong())">
-                Reveal Song
-            </button>
-        }
-        else
-        {
-            <button class="bg-orange-500 hover:bg-orange-700 btn w-full" @onclick="RefreshSong">Refresh
-                Song</button>
-        }
-
-        <div class="flex py-2">
-            <button class="bg-orange-500 hover:bg-orange-700 btn w-full" @onclick="RefreshSong">Force Refresh
-                Song</button>
-        </div>
-
 
         @if (showSong)
         {
-            <SongComponent song=@song></SongComponent>
-            <div class="flex py-2">
+            <div class="flex flex-col gap-2 py-4">
+                <PlayerCorrectComponent isCorrect=@(song.track.id.Equals(userSelectedSong))></PlayerCorrectComponent>
+                <SongComponent song=@song></SongComponent>
                 <button class="bg-green-500 hover:bg-green-700 btn w-full py-2" onclick="playAudio(0.0)">
                     Play From Beginning
                 </button>
             </div>
+
         }
 
-        <audio id="audioPlayer" @ontimeupdate="TimeUpdate" @onplaying="OnPlaying" @onpause="OnStop"></audio>
-
-
+        <audio id="audioPlayer" @ontimeupdate="TimeUpdate" @onplaying="OnPlaying" @onpause="OnStop"
+        src=@song!.track!.preview_url></audio>
     </body>
 
+    <footer class="py-4">
+        <div class="flex flex-row items-center">
+            <button class="bg-pink-500 btn w-1/2" onclick="playAudio(@SongPlaysFrom)">
+                Play
+            </button>
+
+            @if (!showSong)
+            {
+                <button class="bg-orange-500 btn w-1/2" @onclick="@(()=> RevealSong())">
+                    Reveal
+                </button>
+            }
+            else
+            {
+                <button class="bg-orange-500 btn w-1/2" @onclick="RefreshSong">Refresh</button>
+            }
+
+            <button class="bg-blue-500 btn w-1/2" @onclick="IncreaseTime">Time+</button>
+
+        </div>
+        <div class="flex py-2 items-center">
+            <p class="w-1/6">Your Guess:</p>
+            <select @bind="@userSelectedSong" class="w-5/6 h-12 outline-1 outline outline-orange-400 pl-4">
+                @foreach (var artist in playListItems.GroupBy(x => new
+                {
+                    artists = string.Join(", ", x.track.artists.Select(x =>
+                    x.name))
+                }))
+                {
+                    <optgroup label=@artist.Key.artists.Trim()>
+                        @foreach (var song in artist)
+                        {
+                            <option value=@song.track.id>@song.track.name</option>
+                        }
+                    </optgroup>
+                }
+            </select>
+        </div>
+
+    </footer>
 }
+else
+{
+    <p>No Songs have been loaded</p>
+    <button class="bg-green-500 hover:bg-green-700 btn" @onclick=@SetupPage>Setup</button>
+}
+
 @code {
+    public PlaylistInfo? playlistMetadata = null;
+    public SpotifyToken? spotifyToken = null;
     public string PlayingMessage { get; set; } = "";
     public double SectionLength = 1.0;
     public double CurrentPlayTime = 0.0;
-    private int volume = 15;
+    private int volume = 50;
     public int Volume
     {
         get
@@ -97,6 +116,7 @@
         }
     }
     private Song _song = new Song();
+    private string userSelectedSong = string.Empty;
     public Song song
     {
         get
@@ -112,46 +132,40 @@
 
     public List<Song> playListItems = new List<Song>();
     public bool showSong { get; set; } = false;
-
-
     public int SongPlaysFrom { get; set; } = 0;
     bool IsPlaying { get; set; }
 
-    //private ElementReference Audio { get; set; }
-
+    public void SetupPage()
+    {
+        NavigationManager.NavigateTo("/", true);
+    }
     protected async override void OnAfterRender(bool firstRender)
     {
         if (firstRender)
         {
-            //Authentication for Playlist:
-            var client_id = Configuration.GetSection("NGSClientId").Value;
-            var client_secret = Configuration.GetSection("NGSClientSecret").Value;
-            var client = ClientFactory.CreateClient();
+            var playlistMetadataFromStorage = await ProtectedLocalStorage.GetAsync<string>("songData");
 
-            var tokenRequest = await client.SendAsync(Endpoints.GetToken(client_id, client_secret));
-            var token = await tokenRequest.Content.ReadFromJsonAsync<SpotifyToken>();
+            if (playlistMetadataFromStorage.Success)
+            {
+                spotifyToken = await GetSpotifyToken();
+                playlistMetadata = JsonConvert.DeserializeObject<PlaylistInfo>(playlistMetadataFromStorage.Value!);
 
-            var playlistInfoRequest = await client.SendAsync(Endpoints.GetPlayListInfo(token, "7ulKXEl7j07T22foLPNzvU"));
-            var playListInfo = await playlistInfoRequest.Content.ReadFromJsonAsync<PlaylistInfo>();
+                playListItems = (await LoadSongs(spotifyToken!, playlistMetadata!))!;
+                playListItems = playListItems.OrderBy(x => x.track.name).ToList();
+                userSelectedSong = playListItems[0]!.track!.id!;
+                RefreshSong();
+                StateHasChanged();
 
-            var playListSongRequest = await client.SendAsync(Endpoints.GetPlayListSongs(token, playListInfo!.id!));
-            var playListSongs = await playListSongRequest.Content.ReadFromJsonAsync<SpotifyPlaylist>();
-
-            playListItems = playListSongs!.items!.Where(x => x.track!.preview_url != null).ToList();
-
-            var randomSongNum = Random.Shared.Next(0, playListItems.Count);
-            var randomSong = playListItems[randomSongNum];
-            SongPlaysFrom = Random.Shared.Next(0, 25);
-            CurrentPlayTime = SongPlaysFrom;
-            song = randomSong;
-
-            SetAudioVolume(volume);
-            StateHasChanged();
+            }
         }
 
         base.OnAfterRender(firstRender);
+        SetAudioVolume(volume);
     }
-
+    private void selection()
+    {
+        Console.WriteLine(userSelectedSong);
+    }
     private void SetAudioVolume(int volume)
     {
         var newVol = volume / 100.0f;
@@ -164,7 +178,6 @@
 
     private void LoadAudio(string sourceLink)
     {
-        Console.WriteLine("Force Audio Load");
         Js.InvokeVoidAsync("loadAudio", sourceLink).GetAwaiter();
     }
 
@@ -191,12 +204,17 @@
 
     public void RevealSong()
     {
+        if (userSelectedSong.Equals(song.track.id))
+        {
+
+        }
         showSong = !showSong;
         if (showSong)
             PlayAudio(SongPlaysFrom);
         else
             StopAudio();
     }
+
     private async void TimeUpdate(EventArgs e)
     {
         var result = await Js.InvokeAsync<string>("returnDuration");
@@ -224,5 +242,70 @@
     private void OnStop()
     {
         PlayingMessage = "Audio Stopped";
+    }
+
+    public async Task<List<Song>?> LoadSongs(SpotifyToken token, PlaylistInfo playlistMetadata)
+    {
+        var playlistSongs = new List<Song>();
+        var client = ClientFactory.CreateClient();
+        var initialRequestTask = new List<Task<HttpResponseMessage>>();
+        for (int i = 0; i < playlistMetadata?.tracks?.total!; i += 100)
+        {
+            initialRequestTask.Add(client.SendAsync(Endpoints.GetPlayListSongs(spotifyToken, playlistMetadata?.id!, i)));
+        }
+        var completeRequests = await Task.WhenAll(initialRequestTask);
+
+        if (completeRequests.Where(x => x.IsSuccessStatusCode == false).Any())
+        {
+            Console.WriteLine("Error Loading Songs");
+            return null;
+        }
+
+        var completeSongList = new List<Task<SpotifyPlaylist?>>();
+
+        foreach (var songRequest in completeRequests)
+        {
+            completeSongList.Add(songRequest.Content.ReadFromJsonAsync<SpotifyPlaylist>());
+        }
+
+        var playlists = await Task.WhenAll(completeSongList);
+
+        foreach (var playlist in playlists)
+        {
+            playlistSongs.AddRange(playlist!.items!.Where(x => x.track.preview_url != null));
+        }
+
+        return playlistSongs;
+    }
+
+    public async Task<SpotifyToken?> GetSpotifyToken()
+    {
+        var client = ClientFactory.CreateClient();
+        var client_id = Configuration.GetSection("NGSClientId").Value;
+        var client_secret = Configuration.GetSection("NGSClientSecret").Value;
+        var content = new FormUrlEncodedContent(new[] { new KeyValuePair<string, string>("grant_type", "client_credentials") });
+        var authenticationString =
+        Convert.ToBase64String(System.Text.ASCIIEncoding.ASCII.GetBytes($"{client_id}:{client_secret}"));
+        var bearerTokenRequest = new HttpRequestMessage(HttpMethod.Post, "https://accounts.spotify.com/api/token");
+        bearerTokenRequest.Headers.Authorization = new AuthenticationHeaderValue("Basic", authenticationString);
+        bearerTokenRequest.Content = content;
+
+        try
+        {
+            var result = await client.SendAsync(bearerTokenRequest);
+            result.EnsureSuccessStatusCode();
+            return await result.Content.ReadFromJsonAsync<SpotifyToken>();
+
+        }
+        catch (HttpRequestException)
+        {
+            Console.WriteLine("Exception Caught");
+            return null;
+        }
+        catch (Exception)
+        {
+            Console.WriteLine("Exception Caught");
+            return null;
+        }
     }
 }

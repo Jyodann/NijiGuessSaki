@@ -11,17 +11,16 @@
 
 <PageTitle>Niji-Guess-Saki</PageTitle>
 
-@if (playlistMetadata != null)
-{
-    <p class="text-center text-2xl font-semibold">@playlistMetadata.name</p>
-    <p class="text-center text-lg">By: @playlistMetadata.owner!.display_name</p>
-}
 @if (playListItems.Count != 0)
 {
 
-    <body class="font-body">
-
-        <div class="grid grid-cols-3 place-items-center gap-y-4">
+    <body class="font-body h-full">
+        @if (playlistMetadata != null)
+        {
+            <p class="text-center text-2xl font-semibold truncate">@playlistMetadata.name</p>
+            <p class="text-center text-lg">By: @playlistMetadata.owner!.display_name</p>
+        }
+        <div class="grid grid-cols-3 place-items-center gap-y-4 py-2">
             <span class="material-icons">play_circle</span>
             <span class="material-icons">fast_forward</span>
             <span class="material-icons">schedule</span>
@@ -32,21 +31,46 @@
             <p>Length: @SectionLength s</p>
         </div>
 
-        <div class="flex py-2.5">
-            <span class="material-icons">volume_up</span>
-            <input type="range" min="0" max="100" @bind-value=@Volume class="w-full ml-2">
-        </div>
 
-        <div class="flex py-2">
-            <button class="bg-pink-500 hover:bg-pink-700 btn w-1/2 mr-2" onclick="playAudio(@SongPlaysFrom)">
-                Play Section
+        @if (showSong)
+        {
+            <div class="flex flex-col gap-2 py-4">
+                <PlayerCorrectComponent isCorrect=@(song.track.id.Equals(userSelectedSong))></PlayerCorrectComponent>
+                <SongComponent song=@song></SongComponent>
+                <button class="bg-green-500 hover:bg-green-700 btn w-full py-2" onclick="playAudio(0.0)">
+                    Play From Beginning
+                </button>
+            </div>
+
+        }
+
+        <audio id="audioPlayer" @ontimeupdate="TimeUpdate" @onplaying="OnPlaying" @onpause="OnStop"
+        src=@song!.track!.preview_url></audio>
+    </body>
+
+    <footer class="py-4">
+        <div class="flex flex-row items-center">
+            <button class="bg-pink-500 btn w-1/2" onclick="playAudio(@SongPlaysFrom)">
+                Play
             </button>
-            <button class="bg-pink-500 hover:bg-pink-700 btn w-1/2" @onclick="IncreaseTime">Increase Time</button>
-        </div>
 
+            @if (!showSong)
+            {
+                <button class="bg-orange-500 btn w-1/2" @onclick="@(()=> RevealSong())">
+                    Reveal
+                </button>
+            }
+            else
+            {
+                <button class="bg-orange-500 btn w-1/2" @onclick="RefreshSong">Refresh</button>
+            }
+
+            <button class="bg-blue-500 btn w-1/2" @onclick="IncreaseTime">Time+</button>
+
+        </div>
         <div class="flex py-2 items-center">
             <p class="w-1/6">Your Guess:</p>
-            <select @bind="@userSelectedSong" class="w-5/6 h-12 outline-1 outline outline-orange-400">
+            <select @bind="@userSelectedSong" class="w-5/6 h-12 outline-1 outline outline-orange-400 pl-4">
                 @foreach (var artist in playListItems.GroupBy(x => new
                 {
                     artists = string.Join(", ", x.track.artists.Select(x =>
@@ -63,51 +87,21 @@
             </select>
         </div>
 
-
-        @if (!showSong)
-        {
-            <button class="bg-orange-500 hover:bg-orange-700 btn w-full" @onclick="@(() => RevealSong())">
-                Reveal Song
-            </button>
-        }
-        else
-        {
-            <button class="bg-orange-500 hover:bg-orange-700 btn w-full" @onclick="RefreshSong">Refresh
-                Song</button>
-        }
-
-        <div class="flex py-2">
-            <button class="bg-orange-500 hover:bg-orange-700 btn w-full" @onclick="RefreshSong">Force Refresh
-                Song</button>
-        </div>
-
-        @if (showSong)
-        {
-            <PlayerCorrectComponent isCorrect=@(song.track.id.Equals(userSelectedSong))></PlayerCorrectComponent>
-            <SongComponent song=@song></SongComponent>
-            <div class="flex py-2">
-                <button class="bg-green-500 hover:bg-green-700 btn w-full py-2" onclick="playAudio(0.0)">
-                    Play From Beginning
-                </button>
-            </div>
-        }
-
-        <audio id="audioPlayer" @ontimeupdate="TimeUpdate" @onplaying="OnPlaying" @onpause="OnStop"
-        src=@song!.track!.preview_url></audio>
-    </body>
+    </footer>
 }
 else
 {
     <p>No Songs have been loaded</p>
     <button class="bg-green-500 hover:bg-green-700 btn" @onclick=@SetupPage>Setup</button>
 }
+
 @code {
     public PlaylistInfo? playlistMetadata = null;
     public SpotifyToken? spotifyToken = null;
     public string PlayingMessage { get; set; } = "";
     public double SectionLength = 1.0;
     public double CurrentPlayTime = 0.0;
-    private int volume = 15;
+    private int volume = 50;
     public int Volume
     {
         get

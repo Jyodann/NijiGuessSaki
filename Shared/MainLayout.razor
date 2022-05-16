@@ -1,51 +1,52 @@
 ﻿@inherits LayoutComponentBase
 <PageTitle>Niji-Guess-Saki</PageTitle>
+<div class="h-screen flex flex-col">
+    <nav class="bg-blue-200 px-8 py-3 justify-between items-center sm:flex">
+        <div class="flex justify-between items-center">
+            <div>
+                <a href="/guess">
+                    <img src="images/nijiguesssaki_logo.png" alt="Game Logo">
+                </a>
 
-<nav class="bg-blue-200 px-8 py-3 justify-between items-center sm:flex">
-    <div class="flex justify-between items-center">
-        <div>
-            <a href="/guess">
-                <img src="images/nijiguesssaki_logo.png" alt="Game Logo">
-            </a>
-
+            </div>
+            <!-- Right Side of Navigation bar, Mobile:--->
+            <div class="sm:hidden">
+                <button type="button" class="text-white" @onclick="() => isOpen = !isOpen">
+                    <svg class="h-6 w-6 fill-current" viewBox="0 0 24 24">
+                        @if (isOpen)
+                        {
+                            <path fill-rule="evenodd"
+                            d="M18.278 16.864a1 1 0 0 1-1.414 1.414l-4.829-4.828-4.828 4.828a1 1 0 0 1-1.414-1.414l4.828-4.829-4.828-4.828a1 1 0 0 1 1.414-1.414l4.829 4.828 4.828-4.828a1 1 0 1 1 1.414 1.414l-4.828 4.829 4.828 4.828z" />
+                        }
+                        else
+                        {
+                            <path fill-rule="evenodd"
+                            d="M4 5h16a1 1 0 0 1 0 2H4a1 1 0 1 1 0-2zm0 6h16a1 1 0 0 1 0 2H4a1 1 0 0 1 0-2zm0 6h16a1 1 0 0 1 0 2H4a1 1 0 0 1 0-2z" />
+                        }
+                    </svg>
+                </button>
+            </div>
         </div>
-        <!-- Right Side of Navigation bar, Mobile:--->
-        <div class="sm:hidden">
-            <button type="button" class="text-white" @onclick="() => isOpen = !isOpen">
-                <svg class="h-6 w-6 fill-current" viewBox="0 0 24 24">
-                    @if (isOpen)
-                    {
-                        <path fill-rule="evenodd"
-                        d="M18.278 16.864a1 1 0 0 1-1.414 1.414l-4.829-4.828-4.828 4.828a1 1 0 0 1-1.414-1.414l4.828-4.829-4.828-4.828a1 1 0 0 1 1.414-1.414l4.829 4.828 4.828-4.828a1 1 0 1 1 1.414 1.414l-4.828 4.829 4.828 4.828z" />
-                    }
-                    else
-                    {
-                        <path fill-rule="evenodd"
-                        d="M4 5h16a1 1 0 0 1 0 2H4a1 1 0 1 1 0-2zm0 6h16a1 1 0 0 1 0 2H4a1 1 0 0 1 0-2zm0 6h16a1 1 0 0 1 0 2H4a1 1 0 0 1 0-2z" />
-                    }
-                </svg>
-            </button>
+        <!-- Left Side of Navigation bar--->
+
+        <!-- Nav Items --->
+        <div class="sm:flex @(isOpen ? "block" : "hidden")">
+            <a href="#" class="block sm:ml-2 px-2 py-2 text-gray-800 font-semibold hover:bg-blue-300 rounded">Home</a>
+            <a href="/guess"
+                class="block sm:ml-2 px-2 py-2 text-gray-800 font-semibold hover:bg-blue-300 rounded">Guess!</a>
+            <a href="#"
+                class="block sm:ml-2 px-2 py-2 text-gray-800 font-semibold hover:bg-blue-300 rounded">Settings</a>
         </div>
-    </div>
-    <!-- Left Side of Navigation bar--->
-
-    <!-- Nav Items --->
-    <div class="sm:flex @(isOpen ? "block" : "hidden")">
-        <a href="#" class="block sm:ml-2 px-2 py-2 text-gray-800 font-semibold hover:bg-blue-300 rounded">Home</a>
-        <a href="/guess"
-            class="block sm:ml-2 px-2 py-2 text-gray-800 font-semibold hover:bg-blue-300 rounded">Guess!</a>
-        <a href="#" class="block sm:ml-2 px-2 py-2 text-gray-800 font-semibold hover:bg-blue-300 rounded">Settings</a>
-    </div>
-</nav>
+    </nav>
 
 
-<div class="page">
-    <main>
-        <article class="content px-4">
-            @Body
-        </article>
+
+    <main class="content flex-grow flex-col flex px-4">
+        @Body
     </main>
+
 </div>
+
 
 @code {
     public bool isOpen = false;

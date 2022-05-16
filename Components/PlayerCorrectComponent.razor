@@ -1,0 +1,22 @@
+<div class="flex items-center shadow-md @colorOfBox rounded-lg p-2 text-white">
+    <span class="material-icons">@icon</span>
+    <h1>@message</h1>
+</div>
+
+@code
+{
+    [Parameter]
+    public bool isCorrect { get; set; }
+
+    private string colorOfBox = string.Empty;
+    private string icon = string.Empty;
+    private string message = string.Empty;
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+
+        colorOfBox = isCorrect ? "bg-green-700" : "bg-red-700";
+        icon = isCorrect ? "done" : "close";
+        message = isCorrect ? "You got it right!" : "You got it wrong!";
+    }
+}

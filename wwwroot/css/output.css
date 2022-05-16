@@ -542,6 +542,14 @@ Ensure the default browser behavior of the `hidden` attribute.
   width: 1.5rem;
 }
 
+.w-5\/6{
+  width: 83.333333%;
+}
+
+.w-1\/6{
+  width: 16.666667%;
+}
+
 .grid-cols-3{
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
@@ -608,6 +616,21 @@ Ensure the default browser behavior of the `hidden` attribute.
   background-color: rgb(31 41 55 / var(--tw-bg-opacity));
 }
 
+.bg-slate-700{
+  --tw-bg-opacity: 1;
+  background-color: rgb(51 65 85 / var(--tw-bg-opacity));
+}
+
+.bg-red-700{
+  --tw-bg-opacity: 1;
+  background-color: rgb(185 28 28 / var(--tw-bg-opacity));
+}
+
+.bg-green-700{
+  --tw-bg-opacity: 1;
+  background-color: rgb(21 128 61 / var(--tw-bg-opacity));
+}
+
 .fill-current{
   fill: currentColor;
 }
@@ -664,11 +687,6 @@ Ensure the default browser behavior of the `hidden` attribute.
   line-height: 2rem;
 }
 
-.text-3xl{
-  font-size: 1.875rem;
-  line-height: 2.25rem;
-}
-
 .text-lg{
   font-size: 1.125rem;
   line-height: 1.75rem;
@@ -680,10 +698,6 @@ Ensure the default browser behavior of the `hidden` attribute.
 
 .font-semibold{
   font-weight: 600;
-}
-
-.font-thin{
-  font-weight: 100;
 }
 
 .text-white{
@@ -704,6 +718,18 @@ Ensure the default browser behavior of the `hidden` attribute.
 
 .outline{
   outline-style: solid;
+}
+
+.outline-double{
+  outline-style: double;
+}
+
+.outline-1{
+  outline-width: 1px;
+}
+
+.outline-orange-400{
+  outline-color: #fb923c;
 }
 
 .btn{

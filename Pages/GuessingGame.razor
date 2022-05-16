@@ -44,6 +44,26 @@
             <button class="bg-pink-500 hover:bg-pink-700 btn w-1/2" @onclick="IncreaseTime">Increase Time</button>
         </div>
 
+        <div class="flex py-2 items-center">
+            <p class="w-1/6">Your Guess:</p>
+            <select @bind="@userSelectedSong" class="w-5/6 h-12 outline-1 outline outline-orange-400">
+                @foreach (var artist in playListItems.GroupBy(x => new
+                {
+                    artists = string.Join(", ", x.track.artists.Select(x =>
+                    x.name))
+                }))
+                {
+                    <optgroup label=@artist.Key.artists.Trim()>
+                        @foreach (var song in artist)
+                        {
+                            <option value=@song.track.id>@song.track.name</option>
+                        }
+                    </optgroup>
+                }
+            </select>
+        </div>
+
+
         @if (!showSong)
         {
             <button class="bg-orange-500 hover:bg-orange-700 btn w-full" @onclick="@(() => RevealSong())">
@@ -63,6 +83,7 @@
 
         @if (showSong)
         {
+            <PlayerCorrectComponent isCorrect=@(song.track.id.Equals(userSelectedSong))></PlayerCorrectComponent>
             <SongComponent song=@song></SongComponent>
             <div class="flex py-2">
                 <button class="bg-green-500 hover:bg-green-700 btn w-full py-2" onclick="playAudio(0.0)">
@@ -101,6 +122,7 @@ else
         }
     }
     private Song _song = new Song();
+    private string userSelectedSong = string.Empty;
     public Song song
     {
         get
@@ -135,16 +157,21 @@ else
                 playlistMetadata = JsonConvert.DeserializeObject<PlaylistInfo>(playlistMetadataFromStorage.Value!);
 
                 playListItems = (await LoadSongs(spotifyToken!, playlistMetadata!))!;
-
+                playListItems = playListItems.OrderBy(x => x.track.name).ToList();
+                userSelectedSong = playListItems[0]!.track!.id!;
                 RefreshSong();
                 StateHasChanged();
+
             }
         }
 
         base.OnAfterRender(firstRender);
         SetAudioVolume(volume);
     }
-
+    private void selection()
+    {
+        Console.WriteLine(userSelectedSong);
+    }
     private void SetAudioVolume(int volume)
     {
         var newVol = volume / 100.0f;
@@ -183,6 +210,10 @@ else
 
     public void RevealSong()
     {
+        if (userSelectedSong.Equals(song.track.id))
+        {
+
+        }
         showSong = !showSong;
         if (showSong)
             PlayAudio(SongPlaysFrom);

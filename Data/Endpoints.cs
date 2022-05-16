@@ -20,7 +20,7 @@ namespace LoveLiveHeardleSpotify.Data
         public static HttpRequestMessage GetPlayListInfo(SpotifyToken? token, string playlist_id)
         {
             var playListReq = new HttpRequestMessage(HttpMethod.Get,
-            $"https://api.spotify.com/v1/playlists/{playlist_id}?fields=id,owner,description,name,images,tracks(href,next)");
+            $"https://api.spotify.com/v1/playlists/{playlist_id}?fields=id,owner,description,name,images,tracks(href,next,total)");
 
             playListReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token?.access_token);
 

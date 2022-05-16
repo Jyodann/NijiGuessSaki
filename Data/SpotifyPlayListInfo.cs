@@ -26,6 +26,8 @@ namespace LoveLiveHeardleSpotify.Data
     {
         public string? href { get; set; }
         public string? next { get; set; }
+
+        public int? total { get; set; }
     }
 
     public class PlaylistInfo

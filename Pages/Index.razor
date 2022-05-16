@@ -19,8 +19,19 @@
 
 <button @onclick=@TestValue disabled=@(PlaylistStatus.Contains("Checking"))>@PlaylistStatus</button>
 
-<audio hidden></audio>
+<br>
+
+@if (playlistMetadata is not null)
+{
+    <h1>Playlist data:</h1>
+    <img src=@playlistMetadata.images?.First().url height="300" width="300">
+    <p>Name: @playlistMetadata.name</p>
+    <p>Owner: @playlistMetadata?.owner?.display_name</p>
+    <p>Number of Tracks: @playlistMetadata.tracks.total</p>
+}
+
 @code {
+    public PlaylistInfo? playlistMetadata = null;
     public string SongLink { get; set; } = String.Empty;
     public string PlaylistStatus { get; set; } = "Check Playlist";
 
@@ -35,12 +46,15 @@
         if (SongLink.Equals(string.Empty))
         {
             ErrorMessage = "No link was pasted";
+            PlaylistStatus = "Check Playlist";
             return;
         }
         // Check if Starts with Spotify Link:
         if (!SongLink.StartsWith("https://open.spotify.com/playlist/") && SongLink.Length > 22)
         {
             ErrorMessage = "Invalid Spotify Link detected";
+            PlaylistStatus = "Check Playlist";
+            return;
         }
         try
         {
@@ -54,7 +68,11 @@
             }
             else
             {
-
+                var client = ClientFactory.CreateClient();
+                var playListInfoRequest = await client.SendAsync(Endpoints.GetPlayListInfo(token, tempSongLink));
+                var playListInfo = await playListInfoRequest.Content.ReadFromJsonAsync<PlaylistInfo>();
+                Console.WriteLine(playListInfo?.name);
+                playlistMetadata = playListInfo;
             }
 
         }
@@ -68,9 +86,7 @@
         }
         finally
         {
-
             PlaylistStatus = "Check Playlist";
-
         }
 
         PlaylistStatus = "Check Playlist";

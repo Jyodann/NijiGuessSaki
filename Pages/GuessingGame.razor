@@ -1,5 +1,4 @@
 @page "/guess"
-@using System.Net.Http.Headers
 @inject IJSRuntime Js
 @using Data
 @inject IConfiguration Configuration
@@ -21,9 +20,7 @@
             <span class="material-icons">fast_forward</span>
             <span class="material-icons">schedule</span>
 
-
             <PlayerComponent MinSeconds=0.0 MaxSeconds=30.0 CurrentTime=@CurrentPlayTime></PlayerComponent>
-
 
             <p>Start: @SongPlaysFrom.ToString("00:00")</p>
             <p>Length: @SectionLength s</p>
@@ -33,9 +30,6 @@
             <span class="material-icons">volume_up</span>
             <input type="range" min="0" max="100" @bind-value=@Volume class="w-full ml-2">
         </div>
-
-
-
 
         <div class="flex py-2">
             <button class="bg-pink-500 hover:bg-pink-700 btn w-1/2 mr-2" onclick="playAudio(@SongPlaysFrom)">
@@ -61,7 +55,6 @@
                 Song</button>
         </div>
 
-
         @if (showSong)
         {
             <SongComponent song=@song></SongComponent>
@@ -73,10 +66,7 @@
         }
 
         <audio id="audioPlayer" @ontimeupdate="TimeUpdate" @onplaying="OnPlaying" @onpause="OnStop"></audio>
-
-
     </body>
-
 }
 @code {
     public string PlayingMessage { get; set; } = "";

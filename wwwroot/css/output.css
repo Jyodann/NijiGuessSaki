@@ -518,6 +518,46 @@ Ensure the default browser behavior of the `hidden` attribute.
   height: 3rem;
 }
 
+.h-2{
+  height: 0.5rem;
+}
+
+.h-auto{
+  height: auto;
+}
+
+.h-48{
+  height: 12rem;
+}
+
+.h-1\/2{
+  height: 50%;
+}
+
+.h-1\/6{
+  height: 16.666667%;
+}
+
+.h-20{
+  height: 5rem;
+}
+
+.h-24{
+  height: 6rem;
+}
+
+.h-28{
+  height: 7rem;
+}
+
+.h-32{
+  height: 8rem;
+}
+
+.h-1\/4{
+  height: 25%;
+}
+
 .w-full{
   width: 100%;
 }
@@ -532,6 +572,10 @@ Ensure the default browser behavior of the `hidden` attribute.
 
 .w-6{
   width: 1.5rem;
+}
+
+.w-1\/3{
+  width: 33.333333%;
 }
 
 .grid-cols-3{
@@ -556,6 +600,14 @@ Ensure the default browser behavior of the `hidden` attribute.
 
 .gap-y-4{
   row-gap: 1rem;
+}
+
+.overflow-y-auto{
+  overflow-y: auto;
+}
+
+.overflow-y-clip{
+  overflow-y: clip;
 }
 
 .rounded-lg{

@@ -1,7 +1,8 @@
 <div class="flex items-center shadow-md bg-pink-200 rounded-lg p-2">
-    <img src="@song!.track!.album!.images!.Where(x => x.height == 640).FirstOrDefault()!.url"
-        class="rounded-lg aspect-square w-1/4">
-
+    @if (loadImg)
+    {
+        <img loading="lazy" src="@song!.track!.album!.images!.FirstOrDefault()!.url" class="rounded-lg aspect-square h-32">
+    }
     <div class="ml-4 flex-col">
         <h1 class="font-bold text-2xl">@song.track.name</h1>
         <p1 class="block">By: @String.Join(", " , song!.track!.artists!.Select(x=>x.name))</p1>
@@ -13,4 +14,7 @@
 @code {
     [Parameter]
     public Song? song { get; set; }
+
+    [Parameter]
+    public bool loadImg { get; set; } = true;
 }

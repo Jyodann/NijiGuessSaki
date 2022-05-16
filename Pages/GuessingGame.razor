@@ -124,7 +124,7 @@
             var playlistInfoRequest = await client.SendAsync(Endpoints.GetPlayListInfo(token, "7ulKXEl7j07T22foLPNzvU"));
             var playListInfo = await playlistInfoRequest.Content.ReadFromJsonAsync<PlaylistInfo>();
 
-            var playListSongRequest = await client.SendAsync(Endpoints.GetPlayListSongs(token, playListInfo!.id!));
+            var playListSongRequest = await client.SendAsync(Endpoints.GetPlayListSongs(token, playListInfo!.id!, 0));
             var playListSongs = await playListSongRequest.Content.ReadFromJsonAsync<SpotifyPlaylist>();
 
             playListItems = playListSongs!.items!.Where(x => x.track!.preview_url != null).ToList();

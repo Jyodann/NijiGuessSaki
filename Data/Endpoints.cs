@@ -27,10 +27,10 @@ namespace LoveLiveHeardleSpotify.Data
             return playListReq;
         }
 
-        public static HttpRequestMessage GetPlayListSongs(SpotifyToken? token, string playlist_id)
+        public static HttpRequestMessage GetPlayListSongs(SpotifyToken? token, string playlist_id, int offset)
         {
             var playListReq = new HttpRequestMessage(HttpMethod.Get,
-            $"https://api.spotify.com/v1/playlists/{playlist_id}/tracks?fields=total,next,items(track(name,id,preview_url,artists(name),album(images,name)))");
+            $"https://api.spotify.com/v1/playlists/{playlist_id}/tracks?fields=total,next,items(track(name,id,preview_url,artists(name),album(images,name)))&offset={offset}");
             playListReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token?.access_token);
 
             return playListReq;

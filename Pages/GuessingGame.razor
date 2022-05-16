@@ -1,16 +1,22 @@
 @page "/guess"
 @inject IJSRuntime Js
 @using Data
+@using System.Net.Http.Headers
 @inject IConfiguration Configuration
-
 @inject IHttpClientFactory ClientFactory
+@using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage
+@inject ProtectedLocalStorage ProtectedLocalStorage
+@using Newtonsoft.Json
+@inject NavigationManager NavigationManager
 
 <PageTitle>Niji-Guess-Saki</PageTitle>
 
-<head>
-
-</head>
-@if (song != null)
+@if (playlistMetadata != null)
+{
+    <p class="text-center text-2xl font-semibold">@playlistMetadata.name</p>
+    <p class="text-center text-lg">By: @playlistMetadata.owner.display_name</p>
+}
+@if (playListItems.Count != 0)
 {
 
     <body class="font-body">
@@ -65,10 +71,18 @@
             </div>
         }
 
-        <audio id="audioPlayer" @ontimeupdate="TimeUpdate" @onplaying="OnPlaying" @onpause="OnStop"></audio>
+        <audio id="audioPlayer" @ontimeupdate="TimeUpdate" @onplaying="OnPlaying" @onpause="OnStop"
+        src=@song.track.preview_url></audio>
     </body>
 }
+else
+{
+    <p>No Songs have been loaded</p>
+    <button class="bg-green-500 hover:bg-green-700 btn" @onclick=@SetupPage>Setup</button>
+}
 @code {
+    public PlaylistInfo? playlistMetadata = null;
+    public SpotifyToken? spotifyToken = null;
     public string PlayingMessage { get; set; } = "";
     public double SectionLength = 1.0;
     public double CurrentPlayTime = 0.0;
@@ -102,44 +116,33 @@
 
     public List<Song> playListItems = new List<Song>();
     public bool showSong { get; set; } = false;
-
-
     public int SongPlaysFrom { get; set; } = 0;
     bool IsPlaying { get; set; }
 
-    //private ElementReference Audio { get; set; }
-
+    public void SetupPage()
+    {
+        NavigationManager.NavigateTo("/", true);
+    }
     protected async override void OnAfterRender(bool firstRender)
     {
         if (firstRender)
         {
-            //Authentication for Playlist:
-            var client_id = Configuration.GetSection("NGSClientId").Value;
-            var client_secret = Configuration.GetSection("NGSClientSecret").Value;
-            var client = ClientFactory.CreateClient();
+            var playlistMetadataFromStorage = await ProtectedLocalStorage.GetAsync<string>("songData");
 
-            var tokenRequest = await client.SendAsync(Endpoints.GetToken(client_id, client_secret));
-            var token = await tokenRequest.Content.ReadFromJsonAsync<SpotifyToken>();
+            if (playlistMetadataFromStorage.Success)
+            {
+                spotifyToken = await GetSpotifyToken();
+                playlistMetadata = JsonConvert.DeserializeObject<PlaylistInfo>(playlistMetadataFromStorage.Value!);
 
-            var playlistInfoRequest = await client.SendAsync(Endpoints.GetPlayListInfo(token, "7ulKXEl7j07T22foLPNzvU"));
-            var playListInfo = await playlistInfoRequest.Content.ReadFromJsonAsync<PlaylistInfo>();
+                playListItems = await LoadSongs(spotifyToken!, playlistMetadata!);
 
-            var playListSongRequest = await client.SendAsync(Endpoints.GetPlayListSongs(token, playListInfo!.id!, 0));
-            var playListSongs = await playListSongRequest.Content.ReadFromJsonAsync<SpotifyPlaylist>();
-
-            playListItems = playListSongs!.items!.Where(x => x.track!.preview_url != null).ToList();
-
-            var randomSongNum = Random.Shared.Next(0, playListItems.Count);
-            var randomSong = playListItems[randomSongNum];
-            SongPlaysFrom = Random.Shared.Next(0, 25);
-            CurrentPlayTime = SongPlaysFrom;
-            song = randomSong;
-
-            SetAudioVolume(volume);
-            StateHasChanged();
+                RefreshSong();
+                StateHasChanged();
+            }
         }
 
         base.OnAfterRender(firstRender);
+        SetAudioVolume(volume);
     }
 
     private void SetAudioVolume(int volume)
@@ -154,7 +157,6 @@
 
     private void LoadAudio(string sourceLink)
     {
-        Console.WriteLine("Force Audio Load");
         Js.InvokeVoidAsync("loadAudio", sourceLink).GetAwaiter();
     }
 
@@ -187,6 +189,7 @@
         else
             StopAudio();
     }
+
     private async void TimeUpdate(EventArgs e)
     {
         var result = await Js.InvokeAsync<string>("returnDuration");
@@ -214,5 +217,70 @@
     private void OnStop()
     {
         PlayingMessage = "Audio Stopped";
+    }
+
+    public async Task<List<Song>> LoadSongs(SpotifyToken token, PlaylistInfo playlistMetadata)
+    {
+        var playlistSongs = new List<Song>();
+        var client = ClientFactory.CreateClient();
+        var initialRequestTask = new List<Task<HttpResponseMessage>>();
+        for (int i = 0; i < playlistMetadata?.tracks?.total!; i += 100)
+        {
+            initialRequestTask.Add(client.SendAsync(Endpoints.GetPlayListSongs(spotifyToken, playlistMetadata?.id!, i)));
+        }
+        var completeRequests = await Task.WhenAll(initialRequestTask);
+
+        if (completeRequests.Where(x => x.IsSuccessStatusCode == false).Any())
+        {
+            Console.WriteLine("Error Loading Songs");
+            return null;
+        }
+
+        var completeSongList = new List<Task<SpotifyPlaylist?>>();
+
+        foreach (var songRequest in completeRequests)
+        {
+            completeSongList.Add(songRequest.Content.ReadFromJsonAsync<SpotifyPlaylist>());
+        }
+
+        var playlists = await Task.WhenAll(completeSongList);
+
+        foreach (var playlist in playlists)
+        {
+            playlistSongs.AddRange(playlist!.items!.Where(x => x.track.preview_url != null));
+        }
+
+        return playlistSongs;
+    }
+
+    public async Task<SpotifyToken?> GetSpotifyToken()
+    {
+        var client = ClientFactory.CreateClient();
+        var client_id = Configuration.GetSection("NGSClientId").Value;
+        var client_secret = Configuration.GetSection("NGSClientSecret").Value;
+        var content = new FormUrlEncodedContent(new[] { new KeyValuePair<string, string>("grant_type", "client_credentials") });
+        var authenticationString =
+        Convert.ToBase64String(System.Text.ASCIIEncoding.ASCII.GetBytes($"{client_id}:{client_secret}"));
+        var bearerTokenRequest = new HttpRequestMessage(HttpMethod.Post, "https://accounts.spotify.com/api/token");
+        bearerTokenRequest.Headers.Authorization = new AuthenticationHeaderValue("Basic", authenticationString);
+        bearerTokenRequest.Content = content;
+
+        try
+        {
+            var result = await client.SendAsync(bearerTokenRequest);
+            result.EnsureSuccessStatusCode();
+            return await result.Content.ReadFromJsonAsync<SpotifyToken>();
+
+        }
+        catch (HttpRequestException)
+        {
+            Console.WriteLine("Exception Caught");
+            return null;
+        }
+        catch (Exception)
+        {
+            Console.WriteLine("Exception Caught");
+            return null;
+        }
     }
 }

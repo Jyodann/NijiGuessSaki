@@ -30,13 +30,12 @@
     <p>Name: @playlistMetadata.name</p>
     <p>Owner: @playlistMetadata?.owner?.display_name</p>
     <p>Number of Tracks: @playlistMetadata.tracks.total</p>
-
-    <button class="bg-pink-500 hover:bg-pink-700 btn" @onclick=@LoadSongs>Load Songs</button>
+    <p>Loaded @playListItems?.Count Songs that have Preview Links</p>
+    <button class="bg-pink-500 hover:bg-pink-700 btn" @onclick=@ShowSongs>Show Songs</button>
 }
 
-@if (playListItems?.Count != 0)
+@if (showSong)
 {
-    <p>Loaded @playListItems?.Count Songs that have Preview Links</p>
     <div class="w-1/3 h-48 overflow-y-auto">
         @foreach (var item in playListItems)
         {
@@ -46,13 +45,12 @@
 }
 
 @code {
+    public bool showSong { get; set; } = false;
     public SpotifyToken? spotifyToken = null;
     public PlaylistInfo? playlistMetadata = null;
-
     public List<Song>? playListItems = new List<Song>();
     public string SongLink { get; set; } = String.Empty;
     public string PlaylistStatus { get; set; } = "Check Playlist";
-
     public string ErrorMessage { get; set; } = string.Empty;
     public async void TestValue()
     {
@@ -90,6 +88,10 @@
                 var playListInfoRequest = await client.SendAsync(Endpoints.GetPlayListInfo(spotifyToken, tempSongLink));
                 var playListInfo = await playListInfoRequest.Content.ReadFromJsonAsync<PlaylistInfo>();
                 playlistMetadata = playListInfo;
+                var jsonData = JsonConvert.SerializeObject(playlistMetadata);
+                Console.WriteLine(jsonData);
+                await ProtectedLocalStorage.SetAsync("songData", jsonData);
+                LoadSongs();
             }
         }
         catch (ArgumentOutOfRangeException)
@@ -140,22 +142,22 @@
             playListItems.AddRange(playlist!.items!.Where(x => x.track.preview_url != null));
         }
 
-        var jsonData = JsonConvert.SerializeObject(playListItems);
-        Console.WriteLine(System.Text.ASCIIEncoding.Unicode.GetByteCount(jsonData));
-
-        await ProtectedLocalStorage.SetAsync("songData", jsonData);
         StateHasChanged();
     }
+
+    public void ShowSongs()
+    {
+        showSong = !showSong;
+    }
+
     public async Task<SpotifyToken?> GetSpotifyToken()
     {
         var client = ClientFactory.CreateClient();
         var client_id = Configuration.GetSection("NGSClientId").Value;
         var client_secret = Configuration.GetSection("NGSClientSecret").Value;
-
         var content = new FormUrlEncodedContent(new[] { new KeyValuePair<string, string>("grant_type", "client_credentials") });
         var authenticationString =
         Convert.ToBase64String(System.Text.ASCIIEncoding.ASCII.GetBytes($"{client_id}:{client_secret}"));
-
         var bearerTokenRequest = new HttpRequestMessage(HttpMethod.Post, "https://accounts.spotify.com/api/token");
         bearerTokenRequest.Headers.Authorization = new AuthenticationHeaderValue("Basic", authenticationString);
         bearerTokenRequest.Content = content;
@@ -177,6 +179,5 @@
             Console.WriteLine("Exception Caught");
             return null;
         }
-
     }
 }

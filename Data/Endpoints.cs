@@ -8,7 +8,7 @@ namespace LoveLiveHeardleSpotify.Data
         {
             var content = new FormUrlEncodedContent(new[] { new KeyValuePair<string, string>("grant_type", "client_credentials") });
             var authenticationString =
-            Convert.ToBase64String(System.Text.ASCIIEncoding.ASCII.GetBytes($"{client_id}:{client_secret}"));
+            Convert.ToBase64String(System.Text.Encoding.ASCII.GetBytes($"{client_id}:{client_secret}"));
 
             var bearerTokenRequest = new HttpRequestMessage(HttpMethod.Post, "https://accounts.spotify.com/api/token");
             bearerTokenRequest.Headers.Authorization = new AuthenticationHeaderValue("Basic", authenticationString);
